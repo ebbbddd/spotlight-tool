@@ -1,0 +1,4109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canvas Generator</title>
+  <style>
+    :root {
+      --ink: #0f0f10;
+      --muted: rgba(15, 15, 16, 0.56);
+      --line: rgba(15, 15, 16, 0.16);
+      --panel: rgba(255, 255, 255, 0.86);
+      --primary: #fe2c55;
+      --accent: #20d5ec;
+      --canvas: #ffffff;
+      --canvas-grid-size: 10.6667px;
+      --surface: #f3f4f6;
+      --shadow: 0 20px 60px rgba(15, 15, 16, 0.14);
+      --font: "TikTok Sans", Arial, "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--font);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)),
+        radial-gradient(circle, rgba(15, 15, 16, 0.12) 1px, transparent 1px);
+      background-color: var(--surface);
+      background-size: auto, 24px 24px;
+      letter-spacing: 0;
+      overflow-x: auto;
+      overflow-y: auto;
+    }
+
+    button {
+      font: inherit;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      position: relative;
+      width: max(100vw, 814px);
+      min-height: 100vh;
+      height: auto;
+      min-width: 814px;
+      padding: 88px 32px 140px;
+      overflow: visible;
+    }
+
+    .hud {
+      position: fixed;
+      left: 50%;
+      top: 20px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 40px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      box-shadow: 0 8px 28px rgba(15, 15, 16, 0.08);
+      backdrop-filter: blur(16px);
+      transform: translateX(-50%);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .hud-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+
+    .hud-value {
+      min-width: 116px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .workspace {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: calc(100vh - 228px);
+      overflow: visible;
+    }
+
+    .canvas-shell {
+      position: relative;
+      flex: 0 0 auto;
+      width: 750px;
+      height: 420px;
+      user-select: none;
+      touch-action: pan-y;
+    }
+
+    .usage-rules {
+      width: 750px;
+      margin-top: 34px;
+      color: rgba(15, 15, 16, 0.38);
+      font-size: 12px;
+      line-height: 1.7;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .usage-rules ol,
+    .usage-rules ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .usage-rules ul {
+      margin-top: 2px;
+    }
+
+    .usage-rules li {
+      padding-left: 2px;
+    }
+
+    .canvas {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(15, 15, 16, 0.22);
+      border-radius: 18px;
+      background:
+        linear-gradient(90deg, rgba(32, 213, 236, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(32, 213, 236, 0.08) 1px, transparent 1px),
+        var(--canvas);
+      background-size: var(--canvas-grid-size) var(--canvas-grid-size);
+      box-shadow: var(--shadow);
+      cursor: default;
+      overflow: hidden;
+    }
+
+    .image-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .connector-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .connector-path {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .connector-path.is-preview {
+      stroke: var(--primary);
+      stroke-dasharray: 7 7;
+      opacity: 0.78;
+      filter: none;
+    }
+
+    .connector-path.is-selected {
+      stroke-width: 3.2;
+    }
+
+    .connector-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      cursor: move;
+      pointer-events: stroke;
+    }
+
+    .connector-handle {
+      fill: #ffffff;
+      stroke: var(--primary);
+      stroke-width: 2;
+      cursor: grab;
+      pointer-events: all;
+    }
+
+    .connector-handle:active {
+      cursor: grabbing;
+    }
+
+    .connector-node {
+      fill: #ffffff;
+      stroke: var(--primary);
+      stroke-width: 2;
+      cursor: grab;
+      pointer-events: all;
+    }
+
+    .connector-node.is-selected {
+      fill: var(--primary);
+      stroke: #ffffff;
+    }
+
+    .connector-node:active {
+      cursor: grabbing;
+    }
+
+    .guide-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .snap-guide {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .snap-guide.is-vertical {
+      top: 0;
+      width: 1px;
+      height: 100%;
+      transform: translateX(-0.5px);
+    }
+
+    .snap-guide.is-horizontal {
+      left: 0;
+      width: 100%;
+      height: 1px;
+      transform: translateY(-0.5px);
+    }
+
+    .snap-guide[data-kind="position"] {
+      background: var(--primary);
+      box-shadow: 0 0 0 1px rgba(254, 44, 85, 0.16);
+    }
+
+    .snap-guide[data-kind="size"] {
+      background: var(--accent);
+      box-shadow: 0 0 0 1px rgba(32, 213, 236, 0.2);
+    }
+
+    .canvas-image {
+      position: absolute;
+      z-index: 1;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .canvas-image.is-active {
+      outline: 1px solid var(--primary);
+      outline-offset: 0;
+      cursor: move;
+    }
+
+    .canvas-image.is-dragging {
+      cursor: grabbing;
+    }
+
+    .canvas-image img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      -webkit-user-drag: none;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .image-resize-handle {
+      position: absolute;
+      display: none;
+      z-index: 3;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--primary);
+      touch-action: none;
+    }
+
+    .canvas-image.is-single-selected .image-resize-handle {
+      display: block;
+    }
+
+    .image-resize-handle::before {
+      content: "";
+      position: absolute;
+      inset: -10px;
+      border-radius: 8px;
+    }
+
+    .image-resize-handle[data-corner="nw"] {
+      left: 0;
+      top: 0;
+      cursor: nwse-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .image-resize-handle[data-corner="ne"] {
+      right: 0;
+      top: 0;
+      cursor: nesw-resize;
+      transform: translate(50%, -50%);
+    }
+
+    .image-resize-handle[data-corner="se"] {
+      right: 0;
+      bottom: 0;
+      cursor: nwse-resize;
+      transform: translate(50%, 50%);
+    }
+
+    .image-resize-handle[data-corner="sw"] {
+      left: 0;
+      bottom: 0;
+      cursor: nesw-resize;
+      transform: translate(-50%, 50%);
+    }
+
+    .group-selection {
+      position: absolute;
+      z-index: 7;
+      border: 1px solid var(--primary);
+      pointer-events: none;
+    }
+
+    .group-resize-handle {
+      position: absolute;
+      z-index: 8;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--primary);
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .group-resize-handle::before {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border-radius: 8px;
+    }
+
+    .group-resize-handle[data-corner="nw"] {
+      left: 0;
+      top: 0;
+      cursor: nwse-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .group-resize-handle[data-corner="ne"] {
+      right: 0;
+      top: 0;
+      cursor: nesw-resize;
+      transform: translate(50%, -50%);
+    }
+
+    .group-resize-handle[data-corner="se"] {
+      right: 0;
+      bottom: 0;
+      cursor: nwse-resize;
+      transform: translate(50%, 50%);
+    }
+
+    .group-resize-handle[data-corner="sw"] {
+      left: 0;
+      bottom: 0;
+      cursor: nesw-resize;
+      transform: translate(-50%, 50%);
+    }
+
+    .canvas::before,
+    .canvas::after {
+      content: "";
+      position: absolute;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .canvas::before {
+      left: 50%;
+      top: 0;
+      width: 1px;
+      height: 100%;
+      background: rgba(254, 44, 85, 0.18);
+      transform: translateX(-50%);
+    }
+
+    .canvas::after {
+      left: 0;
+      top: 50%;
+      width: 100%;
+      height: 1px;
+      background: rgba(254, 44, 85, 0.18);
+      transform: translateY(-50%);
+    }
+
+    .canvas-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 5px rgba(254, 44, 85, 0.14);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .resize-handle {
+      position: absolute;
+      z-index: 5;
+      left: 50%;
+      bottom: 0;
+      width: 96px;
+      height: 10px;
+      border-radius: 999px;
+      background: #c8c8c8;
+      box-shadow: 0 2px 8px rgba(15, 15, 16, 0.12);
+      cursor: ns-resize;
+      transform: translate(-50%, 50%);
+      touch-action: none;
+    }
+
+    .resize-handle::before {
+      content: "";
+      position: absolute;
+      inset: -12px -16px;
+      border-radius: 999px;
+    }
+
+    .canvas-shell.is-resizing .canvas {
+      border-color: var(--primary);
+      box-shadow: 0 24px 70px rgba(254, 44, 85, 0.18);
+    }
+
+    .canvas-shell.is-moving .canvas {
+      border-color: var(--accent);
+      box-shadow: 0 24px 70px rgba(32, 213, 236, 0.16);
+    }
+
+    .canvas-shell.is-connecting .canvas {
+      cursor: crosshair;
+      border-color: var(--primary);
+      box-shadow: 0 24px 70px rgba(254, 44, 85, 0.14);
+    }
+
+    .canvas-shell.is-connecting .canvas-image {
+      cursor: crosshair;
+    }
+
+    .canvas-shell.is-connecting .image-resize-handle,
+    .canvas-shell.is-connecting .group-resize-handle {
+      display: none !important;
+    }
+
+    .canvas-shell.is-resizing .resize-handle {
+      background: #a8a8a8;
+      box-shadow: 0 2px 10px rgba(15, 15, 16, 0.18);
+    }
+
+    .tool-bar {
+      position: fixed;
+      right: 14px;
+      top: 84px;
+      z-index: 30;
+      display: grid;
+      gap: 10px;
+      width: 112px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 14px 42px rgba(15, 15, 16, 0.12);
+      backdrop-filter: blur(18px);
+      pointer-events: none;
+    }
+
+    .tool-section {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tool-section + .tool-section {
+      padding-top: 10px;
+      border-top: 1px solid rgba(15, 15, 16, 0.1);
+    }
+
+    .tool-section-title {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 800;
+      text-align: center;
+      user-select: none;
+    }
+
+    .tool-button {
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid rgba(15, 15, 16, 0.12);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      pointer-events: auto;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+
+    .tool-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .tool-button.is-active {
+      border-color: var(--ink);
+      color: #ffffff;
+      background: var(--ink);
+    }
+
+    .background-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 7px 9px;
+      border: 1px solid rgba(15, 15, 16, 0.12);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.78);
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
+      pointer-events: auto;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease, border-color 160ms ease;
+    }
+
+    .background-option::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 10px;
+      height: 10px;
+      border: 1px solid rgba(15, 15, 16, 0.2);
+      border-radius: 3px;
+      background: #ffffff;
+    }
+
+    .background-option[data-background="dark"]::before {
+      border-color: #000000;
+      background: #000000;
+    }
+
+    .background-option:hover {
+      transform: translateY(-1px);
+    }
+
+    .background-option.is-active {
+      border-color: var(--ink);
+      color: #ffffff;
+      background: var(--ink);
+    }
+
+    .background-option.is-active::before {
+      border-color: rgba(255, 255, 255, 0.86);
+    }
+
+    .upload-bar {
+      position: fixed;
+      left: 50%;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      z-index: 30;
+      width: min(560px, calc(100vw - 32px));
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 14px 38px rgba(15, 15, 16, 0.12);
+      backdrop-filter: blur(16px);
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .upload-button {
+      flex: 1 1 180px;
+      min-width: 140px;
+      height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      color: #ffffff;
+      background: #000000;
+      font-size: 16px;
+      line-height: 1.4;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .export-button {
+      flex: 0 0 92px;
+      height: 48px;
+      border: 1px solid rgba(15, 15, 16, 0.08);
+      border-radius: 999px;
+      color: var(--ink);
+      background: #e7e7e7;
+      font-size: 14px;
+      line-height: 1.3;
+      font-weight: 800;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+    }
+
+    .export-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #dcdcdc;
+    }
+
+    .export-button:disabled {
+      color: rgba(15, 15, 16, 0.38);
+      cursor: not-allowed;
+    }
+
+    .upload-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .editor-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(15, 15, 16, 0.42);
+      backdrop-filter: blur(18px);
+    }
+
+    .editor-overlay[hidden] {
+      display: none;
+    }
+
+    .editor-dialog {
+      position: relative;
+      width: min(1120px, calc(100vw - 44px));
+      height: min(720px, calc(100vh - 44px));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 34px 90px rgba(15, 15, 16, 0.28);
+    }
+
+    .editor-close {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 3;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(15, 15, 16, 0.12);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 8px 22px rgba(15, 15, 16, 0.12);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .editor-stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(15, 15, 16, 0.14);
+      border-radius: 18px;
+      background:
+        linear-gradient(90deg, rgba(32, 213, 236, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(32, 213, 236, 0.08) 1px, transparent 1px),
+        #f7f8fa;
+      background-size: 28px 28px;
+      overflow: hidden;
+    }
+
+    .editor-preview-image {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .editor-mask {
+      position: absolute;
+      z-index: 1;
+      background: rgba(15, 15, 16, var(--editor-mask, 0));
+      pointer-events: none;
+    }
+
+    .editor-selection {
+      position: absolute;
+      z-index: 2;
+      border: 1.5px solid var(--primary);
+      background: rgba(254, 44, 85, 0.08);
+      box-shadow: 0 0 0 9999px rgba(15, 15, 16, var(--editor-mask, 0));
+      cursor: move;
+      touch-action: none;
+    }
+
+    .editor-selection.is-spotlight {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .spotlight-zoom-layer {
+      position: absolute;
+      z-index: 3;
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: 0 18px 42px rgba(15, 15, 16, 0.22);
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .spotlight-zoom-layer.is-dragging {
+      cursor: grabbing;
+    }
+
+    .spotlight-zoom-layer canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .editor-selection-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--primary);
+      touch-action: none;
+    }
+
+    .editor-selection-handle[data-corner="nw"] {
+      left: 0;
+      top: 0;
+      cursor: nwse-resize;
+      transform: translate(-50%, -50%);
+    }
+
+    .editor-selection-handle[data-corner="ne"] {
+      right: 0;
+      top: 0;
+      cursor: nesw-resize;
+      transform: translate(50%, -50%);
+    }
+
+    .editor-selection-handle[data-corner="se"] {
+      right: 0;
+      bottom: 0;
+      cursor: nwse-resize;
+      transform: translate(50%, 50%);
+    }
+
+    .editor-selection-handle[data-corner="sw"] {
+      left: 0;
+      bottom: 0;
+      cursor: nesw-resize;
+      transform: translate(-50%, 50%);
+    }
+
+    .editor-controls {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 7px;
+      padding: 2px 0 0;
+    }
+
+    .editor-title {
+      margin: 0;
+      padding-left: 0;
+      color: var(--ink);
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    .editor-meta {
+      margin: -8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .selection-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 22px;
+    }
+
+    .editor-control-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .editor-settings-panel {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 18px 18px 20px;
+      border: 1px solid rgba(15, 15, 16, 0.14);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.46);
+      overflow: auto;
+    }
+
+    .editor-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 700;
+    }
+
+    .editor-tabs {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      min-height: 23px;
+    }
+
+    .editor-actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    .editor-action,
+    .editor-secondary {
+      height: 42px;
+      border-radius: 999px;
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .editor-tab {
+      position: relative;
+      padding: 0 0 8px;
+      color: rgba(15, 15, 16, 0.78);
+      background: transparent;
+      font-size: 14px;
+      line-height: 1.15;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .editor-tab.is-active {
+      color: var(--primary);
+      background: transparent;
+    }
+
+    .editor-tab.is-active::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 28px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--primary);
+      transform: translateX(-50%);
+    }
+
+    .editor-range {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .editor-action {
+      color: #ffffff;
+      background: var(--primary);
+    }
+
+    .editor-secondary {
+      border: 1px solid rgba(15, 15, 16, 0.22);
+      color: var(--ink);
+      background: #ffffff;
+    }
+
+    .editor-note {
+      margin-top: auto;
+      margin-bottom: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 600;
+    }
+
+    @media (max-width: 560px) {
+      .hud {
+        top: 12px;
+      }
+
+      .editor-overlay {
+        padding: 12px;
+      }
+
+      .editor-dialog {
+        width: calc(100vw - 24px);
+        height: calc(100vh - 24px);
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+      }
+
+      .editor-title {
+        padding-left: 0;
+        font-size: 18px;
+      }
+
+      .editor-controls {
+        max-height: 260px;
+        overflow: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hud" aria-label="Canvas size">
+      <span class="hud-label">Canvas</span>
+      <span id="sizeValue" class="hud-value">320 x 420 px</span>
+    </section>
+
+    <section class="workspace" aria-label="Canvas workspace">
+      <div id="canvasShell" class="canvas-shell">
+        <div id="canvas" class="canvas" role="img" aria-label="Draggable resizable canvas">
+          <svg id="connectorLayer" class="connector-layer" aria-hidden="true"></svg>
+          <div id="imageLayer" class="image-layer" aria-label="Uploaded images"></div>
+          <div id="groupSelection" class="group-selection" hidden>
+            <button class="group-resize-handle" data-corner="nw" type="button" aria-label="Resize selected images from top left"></button>
+            <button class="group-resize-handle" data-corner="ne" type="button" aria-label="Resize selected images from top right"></button>
+            <button class="group-resize-handle" data-corner="se" type="button" aria-label="Resize selected images from bottom right"></button>
+            <button class="group-resize-handle" data-corner="sw" type="button" aria-label="Resize selected images from bottom left"></button>
+          </div>
+          <div id="guideLayer" class="guide-layer" aria-hidden="true"></div>
+          <span class="canvas-center"></span>
+        </div>
+        <button class="resize-handle" type="button" aria-label="Resize canvas height"></button>
+      </div>
+      <div class="usage-rules" aria-label="使用规则">
+        <ol>
+          <li>双击图片，可进入图片编辑模式</li>
+          <li>连线功能说明：
+            <ul>
+              <li>可点击节点绘制连线，可使用Delete键删除节点</li>
+              <li>按下Enter键结束当前绘制</li>
+              <li>双击连线重新进入编辑模式</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="tool-bar" aria-label="Canvas tools">
+      <div class="tool-section" aria-label="工具">
+        <button id="selectToolButton" class="tool-button is-active" type="button">选择</button>
+        <button id="connectToolButton" class="tool-button" type="button">自由连线</button>
+      </div>
+      <div class="tool-section" aria-label="画布背景色">
+        <span class="tool-section-title">画布背景色</span>
+        <button id="backgroundLightButton" class="background-option is-active" data-background="light" type="button" aria-pressed="true">浅色</button>
+        <button id="backgroundDarkButton" class="background-option" data-background="dark" type="button" aria-pressed="false">深色</button>
+      </div>
+    </section>
+
+    <section class="upload-bar" aria-label="Upload images">
+      <label class="upload-button">
+        Upload images
+        <input id="imageInput" class="upload-input" type="file" accept="image/*" multiple>
+      </label>
+      <button id="downloadCanvasButton" class="export-button" type="button">Download</button>
+      <button id="copyCanvasButton" class="export-button" type="button">Copy</button>
+    </section>
+
+    <section id="imageEditor" class="editor-overlay" aria-label="Image editor" hidden>
+      <div class="editor-dialog" role="dialog" aria-modal="true" aria-label="Image editor">
+        <button id="editorClose" class="editor-close" type="button" aria-label="Close image editor">×</button>
+        <div id="editorStage" class="editor-stage">
+          <img id="editorImage" class="editor-preview-image" alt="">
+          <div id="editorMask" class="editor-mask" hidden></div>
+          <div id="editorSelection" class="editor-selection">
+            <button class="editor-selection-handle" data-corner="nw" type="button" aria-label="Resize selection from top left"></button>
+            <button class="editor-selection-handle" data-corner="ne" type="button" aria-label="Resize selection from top right"></button>
+            <button class="editor-selection-handle" data-corner="se" type="button" aria-label="Resize selection from bottom right"></button>
+            <button class="editor-selection-handle" data-corner="sw" type="button" aria-label="Resize selection from bottom left"></button>
+          </div>
+          <div id="spotlightZoomLayer" class="spotlight-zoom-layer" hidden>
+            <canvas id="spotlightZoomCanvas"></canvas>
+          </div>
+        </div>
+        <aside class="editor-controls">
+          <h2 id="editorTitle" class="editor-title" hidden>Image Editor</h2>
+          <p id="editorMeta" class="editor-meta" hidden></p>
+
+          <div class="editor-tabs" role="tablist" aria-label="Image editing tools">
+            <button id="cropModeButton" class="editor-tab is-active" type="button">Crop</button>
+            <button id="spotlightModeButton" class="editor-tab" type="button">Spotlight</button>
+          </div>
+
+          <div class="editor-settings-panel">
+            <div id="cropControls" class="editor-control-group">
+              <span class="editor-label">Corner Radius <span id="cropRadiusValue">0px</span></span>
+              <input id="cropRadiusRange" class="editor-range" type="range" min="0" max="300" value="0">
+            </div>
+
+            <div id="spotlightControls" class="editor-control-group" hidden>
+              <span class="editor-label">Mask Opacity <span id="maskValue">75%</span></span>
+              <input id="maskRange" class="editor-range" type="range" min="20" max="90" value="75">
+              <span class="editor-label">Corner Radius <span id="spotlightRadiusValue">0px</span></span>
+              <input id="spotlightRadiusRange" class="editor-range" type="range" min="0" max="300" value="0">
+              <span class="editor-label">Magnify <span id="spotlightZoomValue">100%</span></span>
+              <input id="spotlightZoomRange" class="editor-range" type="range" min="100" max="300" step="5" value="100">
+            </div>
+
+            <div class="editor-control-group">
+              <span class="editor-label">Selection</span>
+              <p id="selectionMeta" class="editor-meta selection-meta">-</p>
+            </div>
+
+            <ol id="spotlightNote" class="editor-note" hidden>
+              <li>使用“Magnify放大”功能，可针对选区进行放大</li>
+              <li>点击Esc键可取消选区。双击图片可重新激活选区。</li>
+            </ol>
+          </div>
+
+          <div class="editor-actions">
+            <button id="resetSelectionButton" class="editor-secondary" type="button">Reset Selection</button>
+            <button id="applyCropButton" class="editor-action" type="button">Apply Crop</button>
+            <button id="applySpotlightButton" class="editor-action" type="button" hidden>Apply Spotlight</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      x: null,
+      y: null,
+      width: 750,
+      height: 420,
+      minWidth: 750,
+      minHeight: 240,
+      maxWidth: 750,
+      maxHeight: 6000,
+      images: [],
+      selectedImageIds: [],
+      selectedImageId: null,
+      nextImageId: 1,
+      maxZ: 1,
+      tool: "select",
+      canvasBackground: "light",
+      connectors: [],
+      nextConnectorId: 1,
+      connectorNodes: [],
+      nextConnectorNodeId: 1,
+      selectedConnectorId: null,
+      selectedConnectorNodeId: null,
+      editingConnectorId: null,
+      lastConnectorClick: null,
+      connectorDrag: null,
+      canvasDrag: null,
+      imageDrag: null,
+      undoStack: [],
+      editor: null,
+      editorDrag: null,
+      activeGuides: [],
+      modifierSelect: false
+    };
+
+    const els = {
+      shell: document.getElementById("canvasShell"),
+      canvas: document.getElementById("canvas"),
+      connectorLayer: document.getElementById("connectorLayer"),
+      imageLayer: document.getElementById("imageLayer"),
+      groupSelection: document.getElementById("groupSelection"),
+      guideLayer: document.getElementById("guideLayer"),
+      imageInput: document.getElementById("imageInput"),
+      downloadCanvasButton: document.getElementById("downloadCanvasButton"),
+      copyCanvasButton: document.getElementById("copyCanvasButton"),
+      selectToolButton: document.getElementById("selectToolButton"),
+      connectToolButton: document.getElementById("connectToolButton"),
+      backgroundLightButton: document.getElementById("backgroundLightButton"),
+      backgroundDarkButton: document.getElementById("backgroundDarkButton"),
+      sizeValue: document.getElementById("sizeValue"),
+      imageEditor: document.getElementById("imageEditor"),
+      editorClose: document.getElementById("editorClose"),
+      editorStage: document.getElementById("editorStage"),
+      editorImage: document.getElementById("editorImage"),
+      editorMask: document.getElementById("editorMask"),
+      editorSelection: document.getElementById("editorSelection"),
+      spotlightZoomLayer: document.getElementById("spotlightZoomLayer"),
+      spotlightZoomCanvas: document.getElementById("spotlightZoomCanvas"),
+      editorMeta: document.getElementById("editorMeta"),
+      selectionMeta: document.getElementById("selectionMeta"),
+      cropModeButton: document.getElementById("cropModeButton"),
+      spotlightModeButton: document.getElementById("spotlightModeButton"),
+      cropControls: document.getElementById("cropControls"),
+      cropRadiusRange: document.getElementById("cropRadiusRange"),
+      cropRadiusValue: document.getElementById("cropRadiusValue"),
+      spotlightControls: document.getElementById("spotlightControls"),
+      spotlightNote: document.getElementById("spotlightNote"),
+      maskRange: document.getElementById("maskRange"),
+      maskValue: document.getElementById("maskValue"),
+      spotlightRadiusRange: document.getElementById("spotlightRadiusRange"),
+      spotlightRadiusValue: document.getElementById("spotlightRadiusValue"),
+      spotlightZoomRange: document.getElementById("spotlightZoomRange"),
+      spotlightZoomValue: document.getElementById("spotlightZoomValue"),
+      resetSelectionButton: document.getElementById("resetSelectionButton"),
+      applyCropButton: document.getElementById("applyCropButton"),
+      applySpotlightButton: document.getElementById("applySpotlightButton")
+    };
+
+    const snapThreshold = 7;
+    const connectorGridSize = 32 / 3;
+    const undoLimit = 80;
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function clonePlain(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function createUndoSnapshot() {
+      return {
+        width: state.width,
+        height: state.height,
+        images: state.images.map((image) => ({ ...image })),
+        selectedImageIds: [...state.selectedImageIds],
+        selectedImageId: state.selectedImageId,
+        nextImageId: state.nextImageId,
+        maxZ: state.maxZ,
+        tool: state.tool,
+        canvasBackground: state.canvasBackground,
+        connectors: state.connectors.map((connector) => ({
+          id: connector.id,
+          nodeIds: [...connector.nodeIds]
+        })),
+        nextConnectorId: state.nextConnectorId,
+        connectorNodes: state.connectorNodes.map((node) => ({ ...node })),
+        nextConnectorNodeId: state.nextConnectorNodeId,
+        selectedConnectorId: state.selectedConnectorId,
+        selectedConnectorNodeId: state.selectedConnectorNodeId,
+        editingConnectorId: state.editingConnectorId
+      };
+    }
+
+    function serializeUndoSnapshot(snapshot) {
+      return JSON.stringify(snapshot);
+    }
+
+    function getSnapshotImageUrls(snapshot) {
+      return new Set((snapshot?.images || []).map((image) => image.url).filter(Boolean));
+    }
+
+    function getReferencedImageUrls(extraSnapshots = []) {
+      const urls = new Set(state.images.map((image) => image.url).filter(Boolean));
+      [...state.undoStack, ...extraSnapshots].forEach((entry) => {
+        const snapshot = entry?.snapshot || entry;
+        getSnapshotImageUrls(snapshot).forEach((url) => urls.add(url));
+      });
+      return urls;
+    }
+
+    function revokeUnreferencedImageUrls(urls, extraSnapshots = []) {
+      const referencedUrls = getReferencedImageUrls(extraSnapshots);
+      urls.forEach((url) => {
+        if (url?.startsWith?.("blob:") && !referencedUrls.has(url)) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+
+    function pushUndoSnapshot(snapshot = createUndoSnapshot()) {
+      const serialized = serializeUndoSnapshot(snapshot);
+      const lastEntry = state.undoStack[state.undoStack.length - 1];
+      if (lastEntry?.serialized === serialized) {
+        return;
+      }
+
+      state.undoStack.push({
+        snapshot: clonePlain(snapshot),
+        serialized
+      });
+
+      while (state.undoStack.length > undoLimit) {
+        const removed = state.undoStack.shift();
+        revokeUnreferencedImageUrls(getSnapshotImageUrls(removed.snapshot));
+      }
+    }
+
+    function commitUndoSnapshot(snapshot) {
+      if (!snapshot) {
+        return;
+      }
+
+      if (serializeUndoSnapshot(snapshot) === serializeUndoSnapshot(createUndoSnapshot())) {
+        return;
+      }
+
+      pushUndoSnapshot(snapshot);
+    }
+
+    function restoreUndoSnapshot(snapshot) {
+      const previousUrls = new Set(state.images.map((image) => image.url).filter(Boolean));
+
+      state.width = snapshot.width;
+      state.height = snapshot.height;
+      state.images = snapshot.images.map((image) => ({ ...image }));
+      state.selectedImageIds = [...snapshot.selectedImageIds];
+      state.selectedImageId = snapshot.selectedImageId;
+      state.nextImageId = snapshot.nextImageId;
+      state.maxZ = snapshot.maxZ;
+      state.tool = snapshot.tool;
+      state.canvasBackground = snapshot.canvasBackground || "light";
+      state.connectors = snapshot.connectors.map((connector) => ({
+        id: connector.id,
+        nodeIds: [...connector.nodeIds]
+      }));
+      state.nextConnectorId = snapshot.nextConnectorId;
+      state.connectorNodes = snapshot.connectorNodes.map((node) => ({ ...node }));
+      state.nextConnectorNodeId = snapshot.nextConnectorNodeId;
+      state.selectedConnectorId = snapshot.selectedConnectorId;
+      state.selectedConnectorNodeId = snapshot.selectedConnectorNodeId;
+      state.editingConnectorId = snapshot.editingConnectorId;
+      state.canvasDrag = null;
+      state.imageDrag = null;
+      state.connectorDrag = null;
+      state.lastConnectorClick = null;
+
+      closeImageEditor();
+      clearGuides();
+      els.imageLayer.replaceChildren();
+      state.images.forEach(renderImageElement);
+      renderCanvas();
+      renderSelectionState();
+      renderToolState();
+      renderConnectors();
+      revokeUnreferencedImageUrls(previousUrls, [snapshot]);
+    }
+
+    function undoLastAction() {
+      if (state.canvasDrag || state.imageDrag || state.connectorDrag || !state.undoStack.length) {
+        return false;
+      }
+
+      const entry = state.undoStack.pop();
+      restoreUndoSnapshot(entry.snapshot);
+      return true;
+    }
+
+    function clampImagePosition(image) {
+      const maxX = Math.max(0, state.width - image.width);
+      const maxY = Math.max(0, state.height - image.height);
+      image.x = image.width > state.width ? (state.width - image.width) / 2 : clamp(image.x, 0, maxX);
+      image.y = image.height > state.height ? (state.height - image.height) / 2 : clamp(image.y, 0, maxY);
+    }
+
+    function getCanvasViewportLimits() {
+      const margin = 12;
+      return {
+        margin,
+        minLeft: margin,
+        minTop: margin,
+        maxRight: window.innerWidth - margin,
+        maxBottom: window.innerHeight - margin,
+        maxWidth: state.maxWidth,
+        maxHeight: state.maxHeight
+      };
+    }
+
+    function clampCanvasPosition() {
+      const minVisibleX = Math.min(96, state.width, Math.max(48, window.innerWidth * 0.28));
+      const minVisibleY = Math.min(96, state.height, Math.max(48, window.innerHeight * 0.18));
+      const minX = minVisibleX - state.width;
+      const minY = minVisibleY - state.height;
+      const maxX = window.innerWidth - minVisibleX;
+      const maxY = window.innerHeight - minVisibleY;
+      state.x = clamp(state.x, minX, maxX);
+      state.y = clamp(state.y, minY, maxY);
+    }
+
+    function initializeCanvasPosition() {
+      if (state.x !== null && state.y !== null) {
+        return;
+      }
+
+      state.x = (window.innerWidth - state.width) / 2;
+      state.y = (window.innerHeight - state.height) / 2;
+      clampCanvasPosition();
+    }
+
+    function getRectMetrics(rect) {
+      return {
+        left: rect.x,
+        centerX: rect.x + rect.width / 2,
+        right: rect.x + rect.width,
+        top: rect.y,
+        centerY: rect.y + rect.height / 2,
+        bottom: rect.y + rect.height,
+        width: rect.width,
+        height: rect.height
+      };
+    }
+
+    function normalizeIds(ids) {
+      if (Array.isArray(ids)) {
+        return [...new Set(ids.map(Number).filter(Boolean))];
+      }
+      return ids ? [Number(ids)] : [];
+    }
+
+    function getOtherImages(excludedIds) {
+      const excluded = new Set(normalizeIds(excludedIds));
+      return state.images.filter((image) => !excluded.has(image.id));
+    }
+
+    function getSnapTargets(imageId) {
+      const xTargets = [
+        { value: 0, kind: "position" },
+        { value: state.width / 2, kind: "position" },
+        { value: state.width, kind: "position" }
+      ];
+      const yTargets = [
+        { value: 0, kind: "position" },
+        { value: state.height / 2, kind: "position" },
+        { value: state.height, kind: "position" }
+      ];
+
+      getOtherImages(imageId).forEach((image) => {
+        const metrics = getRectMetrics(image);
+        xTargets.push(
+          { value: metrics.left, kind: "position" },
+          { value: metrics.centerX, kind: "position" },
+          { value: metrics.right, kind: "position" }
+        );
+        yTargets.push(
+          { value: metrics.top, kind: "position" },
+          { value: metrics.centerY, kind: "position" },
+          { value: metrics.bottom, kind: "position" }
+        );
+      });
+
+      return { xTargets, yTargets };
+    }
+
+    function renderGuides(guides = []) {
+      state.activeGuides = guides;
+      els.guideLayer.innerHTML = "";
+
+      guides.forEach((guide) => {
+        const line = document.createElement("span");
+        line.className = `snap-guide ${guide.axis === "x" ? "is-vertical" : "is-horizontal"}`;
+        line.dataset.kind = guide.kind || "position";
+        if (guide.axis === "x") {
+          line.style.left = `${guide.value}px`;
+        } else {
+          line.style.top = `${guide.value}px`;
+        }
+        els.guideLayer.appendChild(line);
+      });
+    }
+
+    function clearGuides() {
+      renderGuides([]);
+    }
+
+    function findBestSnap(sourceValues, targets) {
+      let best = null;
+      sourceValues.forEach((sourceValue) => {
+        targets.forEach((target) => {
+          const delta = target.value - sourceValue;
+          const distance = Math.abs(delta);
+          if (distance <= snapThreshold && (!best || distance < best.distance)) {
+            best = {
+              delta,
+              distance,
+              value: target.value,
+              kind: target.kind
+            };
+          }
+        });
+      });
+      return best;
+    }
+
+    function snapRectPosition(rect, imageId) {
+      const metrics = getRectMetrics(rect);
+      const targets = getSnapTargets(imageId);
+      const xSnap = findBestSnap([metrics.left, metrics.centerX, metrics.right], targets.xTargets);
+      const ySnap = findBestSnap([metrics.top, metrics.centerY, metrics.bottom], targets.yTargets);
+      const guides = [];
+
+      if (xSnap) {
+        rect.x += xSnap.delta;
+        guides.push({ axis: "x", value: xSnap.value, kind: xSnap.kind });
+      }
+      if (ySnap) {
+        rect.y += ySnap.delta;
+        guides.push({ axis: "y", value: ySnap.value, kind: ySnap.kind });
+      }
+
+      return { rect, guides };
+    }
+
+    function getCanvasBackgroundColor() {
+      return state.canvasBackground === "dark" ? "#000000" : "#FFFFFF";
+    }
+
+    function renderCanvasBackgroundState() {
+      const isDark = state.canvasBackground === "dark";
+      els.canvas.style.setProperty("--canvas", getCanvasBackgroundColor());
+      els.backgroundLightButton.classList.toggle("is-active", !isDark);
+      els.backgroundDarkButton.classList.toggle("is-active", isDark);
+      els.backgroundLightButton.setAttribute("aria-pressed", String(!isDark));
+      els.backgroundDarkButton.setAttribute("aria-pressed", String(isDark));
+    }
+
+    function renderCanvas() {
+      state.width = state.maxWidth;
+      state.height = clamp(state.height, state.minHeight, state.maxHeight);
+
+      els.shell.style.width = `${Math.round(state.width)}px`;
+      els.shell.style.height = `${Math.round(state.height)}px`;
+      els.shell.style.left = "";
+      els.shell.style.top = "";
+      const rect = els.shell.getBoundingClientRect();
+      state.x = rect.left;
+      state.y = rect.top;
+      state.images.forEach(syncImageElement);
+      renderGroupSelection();
+      renderConnectors();
+      renderToolState();
+      renderCanvasBackgroundState();
+      const sizeText = `${Math.round(state.width)} x ${Math.round(state.height)} px`;
+      els.sizeValue.textContent = sizeText;
+    }
+
+    function getSign(corner) {
+      return {
+        x: corner.includes("e") ? 1 : -1,
+        y: corner.includes("s") ? 1 : -1
+      };
+    }
+
+    function getCanvasPoint(event) {
+      const rect = els.shell.getBoundingClientRect();
+      return {
+        x: clamp(event.clientX - rect.left, 0, state.width),
+        y: clamp(event.clientY - rect.top, 0, state.height)
+      };
+    }
+
+    function renderToolState() {
+      const isConnecting = state.tool === "connect";
+      els.shell.classList.toggle("is-connecting", isConnecting);
+      els.selectToolButton.classList.toggle("is-active", !isConnecting);
+      els.connectToolButton.classList.toggle("is-active", isConnecting);
+      els.selectToolButton.setAttribute("aria-pressed", String(!isConnecting));
+      els.connectToolButton.setAttribute("aria-pressed", String(isConnecting));
+    }
+
+    function setTool(tool) {
+      state.tool = tool === "connect" ? "connect" : "select";
+      state.connectorDrag = null;
+      state.editingConnectorId = null;
+      state.selectedConnectorNodeId = null;
+      clearGuides();
+      renderConnectors();
+      renderToolState();
+    }
+
+    function setCanvasBackground(background) {
+      const nextBackground = background === "dark" ? "dark" : "light";
+      if (state.canvasBackground === nextBackground) {
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      state.canvasBackground = nextBackground;
+      pushUndoSnapshot(undoSnapshot);
+      renderCanvas();
+    }
+
+    function getImageById(id) {
+      return state.images.find((image) => image.id === id) || null;
+    }
+
+    function createConnectorSvgElement(tagName) {
+      return document.createElementNS("http://www.w3.org/2000/svg", tagName);
+    }
+
+    function getConnectorById(id) {
+      return state.connectors.find((connector) => connector.id === id) || null;
+    }
+
+    function isConnectorDoubleClick(event, connectorId) {
+      if (event.detail >= 2) {
+        state.lastConnectorClick = null;
+        return true;
+      }
+
+      const now = event.timeStamp || performance.now();
+      const previous = state.lastConnectorClick;
+      const isDoubleClick = previous
+        && previous.connectorId === connectorId
+        && now - previous.time <= 420
+        && Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <= 12;
+
+      state.lastConnectorClick = isDoubleClick
+        ? null
+        : {
+            connectorId,
+            time: now,
+            x: event.clientX,
+            y: event.clientY
+          };
+
+      return Boolean(isDoubleClick);
+    }
+
+    function getConnectorNodeById(id) {
+      return state.connectorNodes.find((node) => node.id === id) || null;
+    }
+
+    function getConnectorNodePoint(nodeId) {
+      const node = getConnectorNodeById(nodeId);
+      return node ? { x: node.x, y: node.y } : null;
+    }
+
+    function getConnectorPoints(connector) {
+      return (connector?.nodeIds || [])
+        .map(getConnectorNodePoint)
+        .filter(Boolean);
+    }
+
+    function clampConnectorPoint(point) {
+      return {
+        x: clamp(point.x, 0, state.width),
+        y: clamp(point.y, 0, state.height)
+      };
+    }
+
+    function snapConnectorPoint(point) {
+      const clamped = clampConnectorPoint(point);
+      return {
+        x: clamp(Math.round(clamped.x / connectorGridSize) * connectorGridSize, 0, state.width),
+        y: clamp(Math.round(clamped.y / connectorGridSize) * connectorGridSize, 0, state.height)
+      };
+    }
+
+    function getConnectorPath(points) {
+      if (!points.length) {
+        return "";
+      }
+      if (points.length === 1) {
+        return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+      }
+
+      const commands = [`M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`];
+      for (let index = 1; index < points.length - 1; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
+        const next = points[index + 1];
+        const previousLength = Math.hypot(current.x - previous.x, current.y - previous.y);
+        const nextLength = Math.hypot(next.x - current.x, next.y - current.y);
+        const radius = Math.min(18, previousLength / 2, nextLength / 2);
+
+        if (radius <= 0.5) {
+          commands.push(`L ${current.x.toFixed(2)} ${current.y.toFixed(2)}`);
+          continue;
+        }
+
+        const before = {
+          x: current.x - ((current.x - previous.x) / previousLength) * radius,
+          y: current.y - ((current.y - previous.y) / previousLength) * radius
+        };
+        const after = {
+          x: current.x + ((next.x - current.x) / nextLength) * radius,
+          y: current.y + ((next.y - current.y) / nextLength) * radius
+        };
+
+        commands.push(`L ${before.x.toFixed(2)} ${before.y.toFixed(2)}`);
+        commands.push(`Q ${current.x.toFixed(2)} ${current.y.toFixed(2)} ${after.x.toFixed(2)} ${after.y.toFixed(2)}`);
+      }
+
+      const last = points[points.length - 1];
+      commands.push(`L ${last.x.toFixed(2)} ${last.y.toFixed(2)}`);
+      return commands.join(" ");
+    }
+
+    function appendConnectorMarker(defs, id) {
+      const marker = createConnectorSvgElement("marker");
+      marker.setAttribute("id", id);
+      marker.setAttribute("viewBox", "0 0 10 10");
+      marker.setAttribute("refX", "7.2");
+      marker.setAttribute("refY", "5");
+      marker.setAttribute("markerWidth", "5.5");
+      marker.setAttribute("markerHeight", "5.5");
+      marker.setAttribute("orient", "auto-start-reverse");
+
+      const arrow = createConnectorSvgElement("path");
+      arrow.setAttribute("d", "M 2 1.4 L 7.2 5 L 2 8.6");
+      arrow.setAttribute("fill", "none");
+      arrow.setAttribute("stroke", "#FE2C55");
+      arrow.setAttribute("stroke-width", "1.8");
+      arrow.setAttribute("stroke-linecap", "round");
+      arrow.setAttribute("stroke-linejoin", "round");
+      marker.appendChild(arrow);
+      defs.appendChild(marker);
+    }
+
+    function renderConnectorPath(pathValue, markerId, className, connectorId = null) {
+      const path = createConnectorSvgElement("path");
+      path.setAttribute("class", className);
+      path.setAttribute("d", pathValue);
+      path.setAttribute("marker-end", `url(#${markerId})`);
+      if (connectorId) {
+        path.dataset.connectorId = connectorId;
+      }
+      els.connectorLayer.appendChild(path);
+      return path;
+    }
+
+    function selectConnector(connectorId) {
+      state.selectedConnectorId = connectorId;
+      state.selectedConnectorNodeId = null;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      renderSelectionState();
+      renderConnectors();
+    }
+
+    function markConnectorSelected(connectorId) {
+      state.selectedConnectorId = connectorId;
+      state.selectedConnectorNodeId = null;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      renderSelectionState();
+    }
+
+    function selectConnectorNode(nodeId) {
+      state.selectedConnectorId = null;
+      state.selectedConnectorNodeId = nodeId;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      renderSelectionState();
+      renderConnectors();
+    }
+
+    function markConnectorNodeSelected(nodeId) {
+      state.selectedConnectorId = null;
+      state.selectedConnectorNodeId = nodeId;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      renderSelectionState();
+    }
+
+    function clearConnectorSelection(options = {}) {
+      if (!state.selectedConnectorId && !state.selectedConnectorNodeId) {
+        return;
+      }
+
+      state.selectedConnectorId = null;
+      state.selectedConnectorNodeId = null;
+      if (options.render !== false) {
+        renderConnectors();
+      }
+    }
+
+    function renderConnectors() {
+      els.connectorLayer.setAttribute("viewBox", `0 0 ${state.width} ${state.height}`);
+      els.connectorLayer.replaceChildren();
+
+      const defs = createConnectorSvgElement("defs");
+      appendConnectorMarker(defs, "connectorArrow");
+      els.connectorLayer.appendChild(defs);
+
+      state.connectorNodes = state.connectorNodes.map((node) => ({
+        ...node,
+        ...clampConnectorPoint(node)
+      }));
+      state.connectors.forEach((connector) => {
+        connector.nodeIds = connector.nodeIds.filter((nodeId) => getConnectorNodeById(nodeId));
+      });
+
+      if (state.selectedConnectorId && !getConnectorById(state.selectedConnectorId)) {
+        state.selectedConnectorId = null;
+      }
+      if (state.selectedConnectorNodeId && !getConnectorNodeById(state.selectedConnectorNodeId)) {
+        state.selectedConnectorNodeId = null;
+      }
+      if (state.editingConnectorId && !getConnectorById(state.editingConnectorId)) {
+        state.editingConnectorId = null;
+      }
+
+      state.connectors.forEach((connector) => {
+        const points = getConnectorPoints(connector);
+        if (points.length < 2) {
+          return;
+        }
+
+        const isSelected = connector.id === state.selectedConnectorId;
+        const pathValue = getConnectorPath(points);
+        renderConnectorPath(pathValue, "connectorArrow", `connector-path${isSelected ? " is-selected" : ""}`, connector.id);
+
+        const hitPath = renderConnectorPath(pathValue, "connectorArrow", "connector-hit", connector.id);
+        hitPath.removeAttribute("marker-end");
+        hitPath.addEventListener("pointerdown", (event) => startConnectorMove(event, connector.id));
+        hitPath.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          beginConnectorEdit(connector.id);
+        });
+      });
+
+      const editingConnector = getConnectorById(state.editingConnectorId);
+      if (!editingConnector) {
+        return;
+      }
+
+      editingConnector.nodeIds.forEach((nodeId) => {
+        const node = getConnectorNodeById(nodeId);
+        if (!node) {
+          return;
+        }
+        const nodeElement = createConnectorSvgElement("circle");
+        const isSelected = node.id === state.selectedConnectorNodeId;
+        nodeElement.setAttribute("class", `connector-node${isSelected ? " is-selected" : ""}`);
+        nodeElement.setAttribute("cx", node.x);
+        nodeElement.setAttribute("cy", node.y);
+        nodeElement.setAttribute("r", "7");
+        nodeElement.dataset.nodeId = node.id;
+        nodeElement.addEventListener("pointerdown", (event) => startConnectorNodePointerDown(event, node.id));
+        els.connectorLayer.appendChild(nodeElement);
+      });
+    }
+
+    function addConnectorNode(point) {
+      const snappedPoint = snapConnectorPoint(point);
+      const node = {
+        id: state.nextConnectorNodeId,
+        x: snappedPoint.x,
+        y: snappedPoint.y
+      };
+      state.connectorNodes.push(node);
+      state.nextConnectorNodeId += 1;
+      return node;
+    }
+
+    function createConnector() {
+      const connector = {
+        id: state.nextConnectorId,
+        nodeIds: []
+      };
+      state.connectors.push(connector);
+      state.nextConnectorId += 1;
+      state.selectedConnectorId = connector.id;
+      state.selectedConnectorNodeId = null;
+      return connector;
+    }
+
+    function removeUnusedConnectorNodes() {
+      const usedNodeIds = new Set(state.connectors.flatMap((connector) => connector.nodeIds));
+      state.connectorNodes = state.connectorNodes.filter((node) => usedNodeIds.has(node.id));
+    }
+
+    function getEditingConnector() {
+      return getConnectorById(state.editingConnectorId);
+    }
+
+    function beginConnectorEdit(connectorId) {
+      const connector = getConnectorById(connectorId);
+      if (!connector) {
+        return;
+      }
+
+      state.tool = "connect";
+      state.editingConnectorId = connector.id;
+      state.selectedConnectorId = connector.id;
+      state.selectedConnectorNodeId = null;
+      state.connectorDrag = null;
+      state.lastConnectorClick = null;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      clearGuides();
+      renderSelectionState();
+      renderToolState();
+      renderConnectors();
+    }
+
+    function endConnectorEdit() {
+      const connector = getEditingConnector();
+      if (connector && connector.nodeIds.length < 2) {
+        state.connectors = state.connectors.filter((item) => item.id !== connector.id);
+        state.selectedConnectorId = null;
+      } else if (connector) {
+        state.selectedConnectorId = connector.id;
+      }
+
+      state.editingConnectorId = null;
+      state.selectedConnectorNodeId = null;
+      state.connectorDrag = null;
+      state.lastConnectorClick = null;
+      removeUnusedConnectorNodes();
+      clearGuides();
+      renderToolState();
+      renderConnectors();
+    }
+
+    function deleteConnector(connectorId, options = {}) {
+      const connectorExists = Boolean(getConnectorById(connectorId));
+      if (!connectorExists) {
+        return false;
+      }
+      const undoSnapshot = options.recordUndo === false ? null : (options.undoSnapshot || createUndoSnapshot());
+      state.connectors = state.connectors.filter((connector) => connector.id !== connectorId);
+      if (state.selectedConnectorId === connectorId) {
+        state.selectedConnectorId = null;
+      }
+      if (state.editingConnectorId === connectorId) {
+        state.editingConnectorId = null;
+        state.selectedConnectorNodeId = null;
+      }
+      state.connectorDrag = null;
+      removeUnusedConnectorNodes();
+      renderToolState();
+      renderConnectors();
+      if (undoSnapshot) {
+        pushUndoSnapshot(undoSnapshot);
+      }
+      return true;
+    }
+
+    function deleteSelectedConnectorNode() {
+      if (!state.selectedConnectorNodeId || !state.editingConnectorId) {
+        return false;
+      }
+
+      const connector = getEditingConnector();
+      if (!connector) {
+        return false;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      const selectedNodeId = state.selectedConnectorNodeId;
+      connector.nodeIds = connector.nodeIds.filter((nodeId) => nodeId !== selectedNodeId);
+      state.selectedConnectorNodeId = null;
+      state.connectorDrag = null;
+
+      if (!connector.nodeIds.length) {
+        deleteConnector(connector.id, { recordUndo: false });
+        pushUndoSnapshot(undoSnapshot);
+        return true;
+      }
+
+      removeUnusedConnectorNodes();
+      renderConnectors();
+      pushUndoSnapshot(undoSnapshot);
+      return true;
+    }
+
+    function appendNodeToEditingConnector(point) {
+      const undoSnapshot = createUndoSnapshot();
+      let connector = getEditingConnector();
+      if (!connector) {
+        connector = createConnector();
+        state.editingConnectorId = connector.id;
+      }
+
+      const node = addConnectorNode(point);
+      connector.nodeIds.push(node.id);
+      state.selectedConnectorId = connector.id;
+      state.selectedConnectorNodeId = node.id;
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      renderSelectionState();
+      renderToolState();
+      renderConnectors();
+      pushUndoSnapshot(undoSnapshot);
+      return node;
+    }
+
+    function handleConnectorSurfacePointerDown(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      appendNodeToEditingConnector(getCanvasPoint(event));
+    }
+
+    function startConnectorNodePointerDown(event, nodeId) {
+      event.preventDefault();
+      event.stopPropagation();
+      const node = getConnectorNodeById(nodeId);
+      const editingConnector = getEditingConnector();
+      if (!node || !editingConnector?.nodeIds.includes(nodeId)) {
+        return;
+      }
+
+      event.currentTarget.setPointerCapture(event.pointerId);
+      markConnectorNodeSelected(nodeId);
+      state.connectorDrag = {
+        type: "node-move",
+        pointerId: event.pointerId,
+        captureElement: event.currentTarget,
+        nodeId,
+        undoSnapshot: createUndoSnapshot(),
+        hasChanged: false,
+        startPoint: getCanvasPoint(event),
+        startNode: { ...node }
+      };
+    }
+
+    function startConnectorMove(event, connectorId) {
+      const connector = getConnectorById(connectorId);
+      if (!connector) {
+        return;
+      }
+
+      if (isConnectorDoubleClick(event, connector.id)) {
+        event.preventDefault();
+        event.stopPropagation();
+        beginConnectorEdit(connector.id);
+        return;
+      }
+
+      const nodeIds = [...new Set(connector.nodeIds)];
+      const startNodes = nodeIds.map(getConnectorNodeById).filter(Boolean).map((node) => ({ ...node }));
+      if (!startNodes.length) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      markConnectorSelected(connectorId);
+      state.connectorDrag = {
+        type: "move",
+        pointerId: event.pointerId,
+        captureElement: event.currentTarget,
+        connectorId,
+        undoSnapshot: createUndoSnapshot(),
+        hasChanged: false,
+        startPoint: getCanvasPoint(event),
+        startNodes
+      };
+    }
+
+    function continueConnectorInteraction(event) {
+      if (!state.connectorDrag || event.pointerId !== state.connectorDrag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getCanvasPoint(event);
+      const drag = state.connectorDrag;
+      if (drag.type === "move") {
+        const deltaX = point.x - drag.startPoint.x;
+        const deltaY = point.y - drag.startPoint.y;
+        const anchor = drag.startNodes[0];
+        const snappedAnchor = snapConnectorPoint({
+          x: anchor.x + deltaX,
+          y: anchor.y + deltaY
+        });
+        const finalDeltaX = snappedAnchor.x - anchor.x;
+        const finalDeltaY = snappedAnchor.y - anchor.y;
+        drag.startNodes.forEach((startNode) => {
+          const node = getConnectorNodeById(startNode.id);
+          if (!node) {
+            return;
+          }
+          const nextPoint = clampConnectorPoint({
+            x: startNode.x + finalDeltaX,
+            y: startNode.y + finalDeltaY
+          });
+          node.x = nextPoint.x;
+          node.y = nextPoint.y;
+        });
+        drag.hasChanged = true;
+        renderGuides([
+          { axis: "x", value: snappedAnchor.x, kind: "position" },
+          { axis: "y", value: snappedAnchor.y, kind: "position" }
+        ]);
+      } else if (drag.type === "node-move") {
+        const node = getConnectorNodeById(drag.nodeId);
+        if (!node) {
+          return;
+        }
+        const deltaX = point.x - drag.startPoint.x;
+        const deltaY = point.y - drag.startPoint.y;
+        const snappedPoint = snapConnectorPoint({
+          x: drag.startNode.x + deltaX,
+          y: drag.startNode.y + deltaY
+        });
+        node.x = snappedPoint.x;
+        node.y = snappedPoint.y;
+        drag.hasChanged = true;
+        renderGuides([
+          { axis: "x", value: snappedPoint.x, kind: "position" },
+          { axis: "y", value: snappedPoint.y, kind: "position" }
+        ]);
+      }
+      renderConnectors();
+    }
+
+    function endConnectorInteraction(event) {
+      if (!state.connectorDrag || event.pointerId !== state.connectorDrag.pointerId) {
+        return;
+      }
+
+      const drag = state.connectorDrag;
+      if (drag.captureElement?.hasPointerCapture?.(event.pointerId)) {
+        drag.captureElement.releasePointerCapture(event.pointerId);
+      }
+
+      state.connectorDrag = null;
+      if (drag.hasChanged) {
+        commitUndoSnapshot(drag.undoSnapshot);
+      }
+      renderConnectors();
+      clearGuides();
+    }
+
+    function getSelectedIds() {
+      const existing = new Set(state.images.map((image) => image.id));
+      state.selectedImageIds = state.selectedImageIds.filter((id) => existing.has(id));
+      if (!state.selectedImageIds.includes(state.selectedImageId)) {
+        state.selectedImageId = state.selectedImageIds[state.selectedImageIds.length - 1] || null;
+      }
+      return [...state.selectedImageIds];
+    }
+
+    function isImageSelected(imageId) {
+      return getSelectedIds().includes(imageId);
+    }
+
+    function getSelectionBounds(ids = getSelectedIds()) {
+      const selectedImages = ids.map(getImageById).filter(Boolean);
+      if (!selectedImages.length) {
+        return null;
+      }
+
+      const left = Math.min(...selectedImages.map((image) => image.x));
+      const top = Math.min(...selectedImages.map((image) => image.y));
+      const right = Math.max(...selectedImages.map((image) => image.x + image.width));
+      const bottom = Math.max(...selectedImages.map((image) => image.y + image.height));
+      return {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top
+      };
+    }
+
+    function renderGroupSelection() {
+      const selectedIds = getSelectedIds();
+      const bounds = getSelectionBounds(selectedIds);
+      const shouldShowGroup = selectedIds.length > 1 && bounds;
+
+      els.groupSelection.hidden = !shouldShowGroup;
+      if (!shouldShowGroup) {
+        return;
+      }
+
+      els.groupSelection.style.left = `${bounds.x}px`;
+      els.groupSelection.style.top = `${bounds.y}px`;
+      els.groupSelection.style.width = `${bounds.width}px`;
+      els.groupSelection.style.height = `${bounds.height}px`;
+    }
+
+    function syncImageElement(image) {
+      const element = els.imageLayer.querySelector(`[data-image-id="${image.id}"]`);
+      if (!element) {
+        return;
+      }
+
+      const selectedIds = getSelectedIds();
+      const isSelected = selectedIds.includes(image.id);
+      element.style.left = `${image.x}px`;
+      element.style.top = `${image.y}px`;
+      element.style.width = `${image.width}px`;
+      element.style.height = `${image.height}px`;
+      element.style.zIndex = image.z;
+      element.classList.toggle("is-active", isSelected);
+      element.classList.toggle("is-single-selected", isSelected && selectedIds.length === 1);
+      element.classList.toggle("is-dragging", state.imageDrag?.selectedIds?.includes(image.id) || state.imageDrag?.imageId === image.id);
+    }
+
+    function renderImageElement(image) {
+      const element = document.createElement("div");
+      element.className = "canvas-image";
+      element.dataset.imageId = image.id;
+      element.innerHTML = `
+        <img src="${image.url}" alt="${image.name}">
+        <button class="image-resize-handle" data-corner="nw" type="button" aria-label="Resize image from top left"></button>
+        <button class="image-resize-handle" data-corner="ne" type="button" aria-label="Resize image from top right"></button>
+        <button class="image-resize-handle" data-corner="se" type="button" aria-label="Resize image from bottom right"></button>
+        <button class="image-resize-handle" data-corner="sw" type="button" aria-label="Resize image from bottom left"></button>
+      `;
+
+      element.addEventListener("pointerdown", startImageMove);
+      element.addEventListener("dblclick", (event) => {
+        if (state.tool === "connect") {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        openImageEditor(image.id);
+      });
+      element.querySelectorAll(".image-resize-handle").forEach((handle) => {
+        handle.addEventListener("pointerdown", startImageResize);
+      });
+
+      els.imageLayer.appendChild(element);
+      syncImageElement(image);
+    }
+
+    function renderSelectionState() {
+      state.images.forEach(syncImageElement);
+      renderGroupSelection();
+    }
+
+    function bringImagesToFront(ids) {
+      normalizeIds(ids)
+        .map(getImageById)
+        .filter(Boolean)
+        .sort((a, b) => a.z - b.z)
+        .forEach((image) => {
+          state.maxZ += 1;
+          image.z = state.maxZ;
+        });
+    }
+
+    function setSelection(ids, options = {}) {
+      const { raise = true } = options;
+      const selectedIds = normalizeIds(ids).filter((id) => getImageById(id));
+
+      if (raise && selectedIds.length) {
+        bringImagesToFront(selectedIds);
+      }
+
+      state.selectedImageIds = selectedIds;
+      state.selectedImageId = selectedIds[selectedIds.length - 1] || null;
+      state.selectedConnectorId = null;
+      state.selectedConnectorNodeId = null;
+      state.editingConnectorId = null;
+      renderSelectionState();
+      renderConnectors();
+    }
+
+    function selectImage(imageId) {
+      setSelection([imageId]);
+    }
+
+    function toggleImageSelection(imageId) {
+      const selectedIds = getSelectedIds();
+      const nextIds = selectedIds.includes(imageId)
+        ? selectedIds.filter((id) => id !== imageId)
+        : [...selectedIds, imageId];
+      setSelection(nextIds);
+    }
+
+    function clearSelection() {
+      setSelection([], { raise: false });
+    }
+
+    function selectTopImage() {
+      const topImage = [...state.images].sort((a, b) => b.z - a.z)[0];
+      setSelection(topImage ? [topImage.id] : [], { raise: false });
+    }
+
+    function deleteSelectedImage() {
+      const selectedIds = getSelectedIds();
+      if (!selectedIds.length || state.canvasDrag || state.imageDrag) {
+        return false;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      selectedIds.forEach((id) => {
+        const image = getImageById(id);
+        if (!image) {
+          return;
+        }
+
+        const element = els.imageLayer.querySelector(`[data-image-id="${image.id}"]`);
+        if (element) {
+          element.remove();
+        }
+      });
+
+      const selectedSet = new Set(selectedIds);
+      state.images = state.images.filter((item) => !selectedSet.has(item.id));
+      state.selectedImageIds = [];
+      state.selectedImageId = null;
+      clearGuides();
+      renderConnectors();
+      selectTopImage();
+      pushUndoSnapshot(undoSnapshot);
+      return true;
+    }
+
+    function fitImageToCanvas(naturalWidth, naturalHeight) {
+      const maxWidth = state.width * 0.72;
+      const maxHeight = state.height * 0.72;
+      const scale = Math.min(maxWidth / naturalWidth, maxHeight / naturalHeight, 1);
+      const width = Math.max(32, naturalWidth * scale);
+      const height = Math.max(32, naturalHeight * scale);
+      return { width, height };
+    }
+
+    function addImageFromFile(file, index) {
+      if (!file || !file.type.startsWith("image/")) {
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        const objectUrl = URL.createObjectURL(file);
+        const probe = new Image();
+        probe.onload = () => {
+          const size = fitImageToCanvas(probe.naturalWidth, probe.naturalHeight);
+          const offset = (state.images.length + index) * 18;
+          const image = {
+            id: state.nextImageId,
+            name: file.name || `image-${state.nextImageId}`,
+            url: objectUrl,
+            naturalWidth: probe.naturalWidth,
+            naturalHeight: probe.naturalHeight,
+            aspect: probe.naturalWidth / probe.naturalHeight,
+            x: (state.width - size.width) / 2 + offset,
+            y: (state.height - size.height) / 2 + offset,
+            width: size.width,
+            height: size.height,
+            z: state.maxZ + 1
+          };
+
+          state.nextImageId += 1;
+          state.maxZ += 1;
+          clampImagePosition(image);
+          state.images.push(image);
+          renderImageElement(image);
+          selectImage(image.id);
+          resolve(image);
+        };
+        probe.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(null);
+        };
+        probe.src = objectUrl;
+      });
+    }
+
+    async function uploadImages(files) {
+      const imageFiles = Array.from(files || []).filter((file) => file.type.startsWith("image/"));
+      const undoSnapshot = createUndoSnapshot();
+      let addedImageCount = 0;
+      for (const [index, file] of imageFiles.entries()) {
+        const image = await addImageFromFile(file, index);
+        if (image) {
+          addedImageCount += 1;
+        }
+      }
+      if (addedImageCount) {
+        pushUndoSnapshot(undoSnapshot);
+      }
+      els.imageInput.value = "";
+    }
+
+    function getDefaultEditorSelection(image) {
+      const width = image.naturalWidth * 0.58;
+      const height = image.naturalHeight * 0.42;
+      return {
+        x: (image.naturalWidth - width) / 2,
+        y: (image.naturalHeight - height) / 2,
+        width,
+        height
+      };
+    }
+
+    function getEditorImage() {
+      return state.editor ? getImageById(state.editor.imageId) : null;
+    }
+
+    function sizeEditorImage() {
+      const image = getEditorImage();
+      if (!image || els.imageEditor.hidden) {
+        return;
+      }
+
+      const stageRect = els.editorStage.getBoundingClientRect();
+      if (!stageRect.width || !stageRect.height) {
+        return;
+      }
+
+      const scale = Math.min(stageRect.width / image.naturalWidth, stageRect.height / image.naturalHeight);
+      els.editorImage.style.width = `${image.naturalWidth * scale}px`;
+      els.editorImage.style.height = `${image.naturalHeight * scale}px`;
+    }
+
+    function getEditorImageRect() {
+      const image = getEditorImage();
+      if (!image) {
+        return null;
+      }
+
+      const stageRect = els.editorStage.getBoundingClientRect();
+      const imageRect = els.editorImage.getBoundingClientRect();
+      if (!imageRect.width || !imageRect.height) {
+        return null;
+      }
+
+      return {
+        left: imageRect.left - stageRect.left,
+        top: imageRect.top - stageRect.top,
+        width: imageRect.width,
+        height: imageRect.height,
+        scaleX: imageRect.width / image.naturalWidth,
+        scaleY: imageRect.height / image.naturalHeight
+      };
+    }
+
+    function clampEditorSelection(selection) {
+      const image = getEditorImage();
+      if (!image) {
+        return selection;
+      }
+
+      const minSize = Math.max(12, Math.min(image.naturalWidth, image.naturalHeight) * 0.04);
+      const width = clamp(selection.width, minSize, image.naturalWidth);
+      const height = clamp(selection.height, minSize, image.naturalHeight);
+      return {
+        x: clamp(selection.x, 0, image.naturalWidth - width),
+        y: clamp(selection.y, 0, image.naturalHeight - height),
+        width,
+        height
+      };
+    }
+
+    function getActiveEditorRadius() {
+      if (!state.editor) {
+        return 0;
+      }
+
+      return state.editor.mode === "spotlight"
+        ? state.editor.spotlightRadius
+        : state.editor.cropRadius;
+    }
+
+    function getSpotlightZoomScale() {
+      if (!state.editor || state.editor.mode !== "spotlight") {
+        return 1;
+      }
+
+      return Math.max(1, state.editor.spotlightZoom || 1);
+    }
+
+    function clampZoomCoordinate(value, extent, containerExtent) {
+      if (extent >= containerExtent) {
+        return (containerExtent - extent) / 2;
+      }
+
+      return clamp(value, 0, containerExtent - extent);
+    }
+
+    function getSpotlightZoomSize(selection) {
+      const scale = getSpotlightZoomScale();
+      return {
+        scale,
+        width: selection.width * scale,
+        height: selection.height * scale
+      };
+    }
+
+    function getDefaultSpotlightZoomPosition(selection, size, image) {
+      const x = selection.x + selection.width / 2 - size.width / 2;
+      const y = selection.y + selection.height / 2 - size.height / 2;
+      return {
+        x: clampZoomCoordinate(x, size.width, image.naturalWidth),
+        y: clampZoomCoordinate(y, size.height, image.naturalHeight)
+      };
+    }
+
+    function ensureSpotlightZoomPosition(selection) {
+      const image = getEditorImage();
+      if (!state.editor || !image) {
+        return null;
+      }
+
+      const size = getSpotlightZoomSize(selection);
+      if (size.scale <= 1) {
+        return null;
+      }
+
+      const hasPosition = Number.isFinite(state.editor.zoomX) && Number.isFinite(state.editor.zoomY);
+      if (!state.editor.zoomMoved || !hasPosition) {
+        const next = getDefaultSpotlightZoomPosition(selection, size, image);
+        state.editor.zoomX = next.x;
+        state.editor.zoomY = next.y;
+      } else {
+        state.editor.zoomX = clampZoomCoordinate(state.editor.zoomX, size.width, image.naturalWidth);
+        state.editor.zoomY = clampZoomCoordinate(state.editor.zoomY, size.height, image.naturalHeight);
+      }
+
+      return {
+        x: state.editor.zoomX,
+        y: state.editor.zoomY,
+        width: size.width,
+        height: size.height,
+        scale: size.scale
+      };
+    }
+
+    function getSpotlightZoomRect(selection) {
+      if (!state.editor || state.editor.mode !== "spotlight" || state.editor.spotlightZoom <= 1) {
+        return null;
+      }
+
+      return ensureSpotlightZoomPosition(selection);
+    }
+
+    function isEditorSelectionVisible() {
+      return !state.editor || state.editor.selectionVisible !== false;
+    }
+
+    function positionEditorMask(rect) {
+      els.editorMask.style.left = `${rect.left}px`;
+      els.editorMask.style.top = `${rect.top}px`;
+      els.editorMask.style.width = `${rect.width}px`;
+      els.editorMask.style.height = `${rect.height}px`;
+      els.editorMask.style.setProperty("--editor-mask", state.editor?.mask || 0);
+    }
+
+    function hideSpotlightSelection() {
+      if (!state.editor || state.editor.mode !== "spotlight" || !isEditorSelectionVisible()) {
+        return false;
+      }
+
+      state.editor.selectionVisible = false;
+      state.editorDrag = null;
+      renderEditorSelection();
+      return true;
+    }
+
+    function showSpotlightSelection() {
+      if (!state.editor || state.editor.mode !== "spotlight" || isEditorSelectionVisible()) {
+        return false;
+      }
+
+      state.editor.selectionVisible = true;
+      renderEditorSelection();
+      return true;
+    }
+
+    function renderSpotlightZoomLayer(selection, rect) {
+      if (!state.editor || state.editor.mode !== "spotlight" || state.editor.spotlightZoom <= 1 || !selection || !rect || !els.editorImage.complete) {
+        els.spotlightZoomLayer.hidden = true;
+        return;
+      }
+
+      const zoomRect = ensureSpotlightZoomPosition(selection);
+      if (!zoomRect) {
+        els.spotlightZoomLayer.hidden = true;
+        return;
+      }
+
+      const displayWidth = zoomRect.width * rect.scaleX;
+      const displayHeight = zoomRect.height * rect.scaleY;
+      const displayRadius = Math.min(
+        state.editor.spotlightRadius * zoomRect.scale * Math.min(rect.scaleX, rect.scaleY),
+        displayWidth / 2,
+        displayHeight / 2
+      );
+      const canvasWidth = Math.max(1, Math.round(zoomRect.width));
+      const canvasHeight = Math.max(1, Math.round(zoomRect.height));
+      const canvas = els.spotlightZoomCanvas;
+      if (canvas.width !== canvasWidth) {
+        canvas.width = canvasWidth;
+      }
+      if (canvas.height !== canvasHeight) {
+        canvas.height = canvasHeight;
+      }
+
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.save();
+      addRoundedRectPath(context, 0, 0, canvas.width, canvas.height, state.editor.spotlightRadius * zoomRect.scale);
+      context.clip();
+      context.drawImage(
+        els.editorImage,
+        selection.x,
+        selection.y,
+        selection.width,
+        selection.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      context.restore();
+
+      els.spotlightZoomLayer.hidden = false;
+      els.spotlightZoomLayer.style.left = `${rect.left + zoomRect.x * rect.scaleX}px`;
+      els.spotlightZoomLayer.style.top = `${rect.top + zoomRect.y * rect.scaleY}px`;
+      els.spotlightZoomLayer.style.width = `${displayWidth}px`;
+      els.spotlightZoomLayer.style.height = `${displayHeight}px`;
+      els.spotlightZoomLayer.style.borderRadius = `${displayRadius}px`;
+    }
+
+    function renderEditorSelection() {
+      if (!state.editor) {
+        return;
+      }
+
+      sizeEditorImage();
+      const image = getEditorImage();
+      const rect = getEditorImageRect();
+      if (!image || !rect) {
+        return;
+      }
+
+      state.editor.selection = clampEditorSelection(state.editor.selection);
+      const selection = state.editor.selection;
+      const selectionVisible = isEditorSelectionVisible() || state.editor.mode !== "spotlight";
+      const showFullMask = state.editor.mode === "spotlight" && !selectionVisible;
+
+      positionEditorMask(rect);
+      els.editorMask.hidden = !showFullMask;
+      els.editorSelection.hidden = !selectionVisible;
+
+      if (!selectionVisible) {
+        els.selectionMeta.textContent = "Selection hidden · double-click image to edit";
+        renderSpotlightZoomLayer(selection, rect);
+        return;
+      }
+
+      els.editorSelection.style.left = `${rect.left + selection.x * rect.scaleX}px`;
+      els.editorSelection.style.top = `${rect.top + selection.y * rect.scaleY}px`;
+      els.editorSelection.style.width = `${selection.width * rect.scaleX}px`;
+      els.editorSelection.style.height = `${selection.height * rect.scaleY}px`;
+      els.editorSelection.style.setProperty("--editor-mask", state.editor.mode === "spotlight" ? state.editor.mask : 0);
+      const activeRadius = getActiveEditorRadius();
+      const previewRadius = Math.min(
+        activeRadius * Math.min(rect.scaleX, rect.scaleY),
+        selection.width * rect.scaleX / 2,
+        selection.height * rect.scaleY / 2
+      );
+      els.editorSelection.style.borderRadius = `${previewRadius}px`;
+      els.editorSelection.classList.toggle("is-spotlight", state.editor.mode === "spotlight");
+      els.selectionMeta.innerHTML = `<span>${Math.round(selection.x)}, ${Math.round(selection.y)}</span><span>${Math.round(selection.width)} x ${Math.round(selection.height)} px</span>`;
+      renderSpotlightZoomLayer(selection, rect);
+    }
+
+    function renderEditorMode() {
+      if (!state.editor) {
+        return;
+      }
+
+      const isCrop = state.editor.mode === "crop";
+      els.cropModeButton.classList.toggle("is-active", isCrop);
+      els.spotlightModeButton.classList.toggle("is-active", !isCrop);
+      els.cropControls.hidden = !isCrop;
+      els.spotlightControls.hidden = isCrop;
+      els.spotlightNote.hidden = isCrop;
+      els.applyCropButton.hidden = !isCrop;
+      els.applySpotlightButton.hidden = isCrop;
+      els.cropRadiusRange.value = Math.round(state.editor.cropRadius);
+      els.cropRadiusValue.textContent = `${Math.round(state.editor.cropRadius)}px`;
+      els.maskRange.value = Math.round(state.editor.mask * 100);
+      els.maskValue.textContent = `${Math.round(state.editor.mask * 100)}%`;
+      els.spotlightRadiusRange.value = Math.round(state.editor.spotlightRadius);
+      els.spotlightRadiusValue.textContent = `${Math.round(state.editor.spotlightRadius)}px`;
+      els.spotlightZoomRange.value = Math.round(state.editor.spotlightZoom * 100);
+      els.spotlightZoomValue.textContent = `${Math.round(state.editor.spotlightZoom * 100)}%`;
+      renderEditorSelection();
+    }
+
+    function resetSpotlightZoom() {
+      if (!state.editor) {
+        return;
+      }
+
+      state.editor.spotlightZoom = 1;
+      state.editor.zoomX = null;
+      state.editor.zoomY = null;
+      state.editor.zoomMoved = false;
+      els.spotlightZoomLayer.hidden = true;
+      els.spotlightZoomLayer.classList.remove("is-dragging");
+    }
+
+    function setEditorMode(mode) {
+      if (!state.editor) {
+        return;
+      }
+
+      state.editor.mode = mode;
+      state.editor.selectionVisible = true;
+      resetSpotlightZoom();
+      renderEditorMode();
+    }
+
+    function openImageEditor(imageId) {
+      const image = getImageById(imageId);
+      if (!image) {
+        return;
+      }
+
+      clearGuides();
+      selectImage(image.id);
+      state.editor = {
+        imageId: image.id,
+        mode: "crop",
+        mask: Number(els.maskRange.value) / 100,
+        cropRadius: Number(els.cropRadiusRange.value),
+        spotlightRadius: Number(els.spotlightRadiusRange.value),
+        spotlightZoom: 1,
+        zoomX: null,
+        zoomY: null,
+        zoomMoved: false,
+        selectionVisible: true,
+        selection: getDefaultEditorSelection(image)
+      };
+
+      els.editorImage.alt = image.name;
+      els.editorImage.src = image.url;
+      els.editorMeta.textContent = "";
+      els.imageEditor.hidden = false;
+      renderEditorMode();
+      requestAnimationFrame(renderEditorSelection);
+    }
+
+    function closeImageEditor() {
+      state.editor = null;
+      state.editorDrag = null;
+      els.imageEditor.hidden = true;
+      els.editorMask.hidden = true;
+      els.editorSelection.hidden = false;
+      els.spotlightZoomLayer.hidden = true;
+      els.spotlightZoomLayer.classList.remove("is-dragging");
+      els.editorImage.removeAttribute("src");
+    }
+
+    function resetEditorSelection() {
+      const image = getEditorImage();
+      if (!state.editor || !image) {
+        return;
+      }
+
+      state.editor.selection = getDefaultEditorSelection(image);
+      state.editor.selectionVisible = true;
+      state.editor.zoomX = null;
+      state.editor.zoomY = null;
+      state.editor.zoomMoved = false;
+      renderEditorSelection();
+    }
+
+    function getEditorNaturalPoint(event) {
+      const image = getEditorImage();
+      const rect = getEditorImageRect();
+      if (!image || !rect) {
+        return { x: 0, y: 0 };
+      }
+
+      return {
+        x: clamp((event.clientX - els.editorStage.getBoundingClientRect().left - rect.left) / rect.scaleX, 0, image.naturalWidth),
+        y: clamp((event.clientY - els.editorStage.getBoundingClientRect().top - rect.top) / rect.scaleY, 0, image.naturalHeight)
+      };
+    }
+
+    function startEditorSelectionMove(event) {
+      if (!state.editor || !isEditorSelectionVisible() || event.target.closest(".editor-selection-handle")) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      els.editorSelection.setPointerCapture(event.pointerId);
+      state.editorDrag = {
+        type: "move",
+        pointerId: event.pointerId,
+        startPoint: getEditorNaturalPoint(event),
+        startSelection: { ...state.editor.selection }
+      };
+    }
+
+    function startEditorSelectionResize(event) {
+      if (!state.editor || !isEditorSelectionVisible()) {
+        return;
+      }
+
+      const handle = event.currentTarget;
+      const corner = handle.dataset.corner;
+      const sign = getSign(corner);
+      const selection = state.editor.selection;
+      const anchorX = sign.x > 0 ? selection.x : selection.x + selection.width;
+      const anchorY = sign.y > 0 ? selection.y : selection.y + selection.height;
+
+      event.preventDefault();
+      event.stopPropagation();
+      handle.setPointerCapture(event.pointerId);
+      state.editorDrag = {
+        type: "resize",
+        pointerId: event.pointerId,
+        corner,
+        sign,
+        anchorX,
+        anchorY,
+        startSelection: { ...selection }
+      };
+    }
+
+    function startSpotlightZoomMove(event) {
+      if (!state.editor || state.editor.mode !== "spotlight" || state.editor.spotlightZoom <= 1) {
+        return;
+      }
+
+      const selection = clampEditorSelection(state.editor.selection);
+      const zoomRect = ensureSpotlightZoomPosition(selection);
+      if (!zoomRect) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      els.spotlightZoomLayer.setPointerCapture(event.pointerId);
+      els.spotlightZoomLayer.classList.add("is-dragging");
+      state.editor.zoomMoved = true;
+      state.editorDrag = {
+        type: "zoom",
+        pointerId: event.pointerId,
+        startPoint: getEditorNaturalPoint(event),
+        startZoom: {
+          x: zoomRect.x,
+          y: zoomRect.y
+        }
+      };
+    }
+
+    function handleEditorStageDoubleClick(event) {
+      if (!state.editor || state.editor.mode !== "spotlight" || isEditorSelectionVisible()) {
+        return;
+      }
+      if (event.target.closest?.("#spotlightZoomLayer")) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      showSpotlightSelection();
+    }
+
+    function moveEditorSelection(point) {
+      const image = getEditorImage();
+      const drag = state.editorDrag;
+      if (!image || !drag) {
+        return;
+      }
+
+      if (drag.type === "zoom") {
+        const selection = clampEditorSelection(state.editor.selection);
+        const size = getSpotlightZoomSize(selection);
+        state.editor.zoomX = clampZoomCoordinate(drag.startZoom.x + point.x - drag.startPoint.x, size.width, image.naturalWidth);
+        state.editor.zoomY = clampZoomCoordinate(drag.startZoom.y + point.y - drag.startPoint.y, size.height, image.naturalHeight);
+      } else if (drag.type === "move") {
+        const deltaX = point.x - drag.startPoint.x;
+        const deltaY = point.y - drag.startPoint.y;
+        state.editor.selection = clampEditorSelection({
+          ...drag.startSelection,
+          x: drag.startSelection.x + deltaX,
+          y: drag.startSelection.y + deltaY
+        });
+      } else {
+        const minSize = Math.max(12, Math.min(image.naturalWidth, image.naturalHeight) * 0.04);
+        const rawX = drag.sign.x > 0 ? point.x : drag.anchorX - Math.max(minSize, drag.anchorX - point.x);
+        const rawY = drag.sign.y > 0 ? point.y : drag.anchorY - Math.max(minSize, drag.anchorY - point.y);
+        const rawWidth = drag.sign.x > 0 ? point.x - drag.anchorX : drag.anchorX - rawX;
+        const rawHeight = drag.sign.y > 0 ? point.y - drag.anchorY : drag.anchorY - rawY;
+        const next = {
+          x: drag.sign.x > 0 ? drag.anchorX : rawX,
+          y: drag.sign.y > 0 ? drag.anchorY : rawY,
+          width: Math.max(minSize, Math.abs(rawWidth)),
+          height: Math.max(minSize, Math.abs(rawHeight))
+        };
+        state.editor.selection = clampEditorSelection(next);
+      }
+
+      renderEditorSelection();
+    }
+
+    function continueEditorInteraction(event) {
+      if (!state.editorDrag || event.pointerId !== state.editorDrag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      moveEditorSelection(getEditorNaturalPoint(event));
+    }
+
+    function endEditorInteraction(event) {
+      if (!state.editorDrag || event.pointerId !== state.editorDrag.pointerId) {
+        return;
+      }
+
+      let handle = els.editorSelection;
+      if (state.editorDrag.type === "resize") {
+        handle = els.editorSelection.querySelector(`[data-corner="${state.editorDrag.corner}"]`);
+      } else if (state.editorDrag.type === "zoom") {
+        handle = els.spotlightZoomLayer;
+      }
+      if (handle?.hasPointerCapture?.(event.pointerId)) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+      els.spotlightZoomLayer.classList.remove("is-dragging");
+      state.editorDrag = null;
+    }
+
+    function loadCanvasImage(url) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = url;
+      });
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+      });
+    }
+
+    function getCanvasExportScale() {
+      const preferredScale = 3;
+      const maxExportDimension = 12000;
+      const maxDimension = Math.max(state.width, state.height);
+      return Math.max(1, Math.min(preferredScale, maxExportDimension / maxDimension));
+    }
+
+    function drawExportArrow(context, points) {
+      if (points.length < 2) {
+        return;
+      }
+
+      const end = points[points.length - 1];
+      const previous = points[points.length - 2];
+      const angle = Math.atan2(end.y - previous.y, end.x - previous.x);
+      const arrowLength = 9;
+      const arrowSpread = 0.68;
+
+      context.beginPath();
+      context.moveTo(end.x, end.y);
+      context.lineTo(
+        end.x - Math.cos(angle - arrowSpread) * arrowLength,
+        end.y - Math.sin(angle - arrowSpread) * arrowLength
+      );
+      context.moveTo(end.x, end.y);
+      context.lineTo(
+        end.x - Math.cos(angle + arrowSpread) * arrowLength,
+        end.y - Math.sin(angle + arrowSpread) * arrowLength
+      );
+      context.stroke();
+    }
+
+    function drawExportConnector(context, connector) {
+      const points = getConnectorPoints(connector);
+      if (points.length < 2) {
+        return;
+      }
+
+      context.save();
+      context.strokeStyle = "#FE2C55";
+      context.lineWidth = 2.4;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.stroke(new Path2D(getConnectorPath(points)));
+      drawExportArrow(context, points);
+      context.restore();
+    }
+
+    async function renderCanvasExport() {
+      const exportScale = getCanvasExportScale();
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(state.width * exportScale));
+      canvas.height = Math.max(1, Math.round(state.height * exportScale));
+      const context = canvas.getContext("2d");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.scale(exportScale, exportScale);
+
+      context.fillStyle = getCanvasBackgroundColor();
+      context.fillRect(0, 0, state.width, state.height);
+
+      const orderedImages = [...state.images].sort((first, second) => first.z - second.z);
+      for (const image of orderedImages) {
+        const source = await loadCanvasImage(image.url);
+        context.drawImage(source, image.x, image.y, image.width, image.height);
+      }
+
+      state.connectors.forEach((connector) => drawExportConnector(context, connector));
+      return canvas;
+    }
+
+    async function getCanvasExportBlob() {
+      const canvas = await renderCanvasExport();
+      const blob = await canvasToBlob(canvas);
+      if (!blob) {
+        throw new Error("PNG export failed.");
+      }
+      return blob;
+    }
+
+    function setTemporaryButtonLabel(button, label) {
+      const originalLabel = button.dataset.defaultLabel || button.textContent;
+      button.dataset.defaultLabel = originalLabel;
+      button.textContent = label;
+      window.setTimeout(() => {
+        button.textContent = button.dataset.defaultLabel || originalLabel;
+      }, 1400);
+    }
+
+    async function downloadCanvasPng() {
+      els.downloadCanvasButton.disabled = true;
+      try {
+        const blob = await getCanvasExportBlob();
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `canvas-export-${Date.now()}.png`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+        setTemporaryButtonLabel(els.downloadCanvasButton, "Done");
+      } catch (error) {
+        console.error(error);
+        setTemporaryButtonLabel(els.downloadCanvasButton, "Failed");
+      } finally {
+        els.downloadCanvasButton.disabled = false;
+      }
+    }
+
+    async function copyCanvasPng() {
+      els.copyCanvasButton.disabled = true;
+      try {
+        if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+          throw new Error("PNG clipboard copy is not supported in this browser.");
+        }
+        const blob = await getCanvasExportBlob();
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": blob
+          })
+        ]);
+        setTemporaryButtonLabel(els.copyCanvasButton, "Copied");
+      } catch (error) {
+        console.error(error);
+        setTemporaryButtonLabel(els.copyCanvasButton, "Failed");
+      } finally {
+        els.copyCanvasButton.disabled = false;
+      }
+    }
+
+    async function replaceImageAsset(image, canvas, options = {}) {
+      const blob = await canvasToBlob(canvas);
+      if (!blob) {
+        return;
+      }
+
+      pushUndoSnapshot(options.undoSnapshot || createUndoSnapshot());
+      const nextUrl = URL.createObjectURL(blob);
+      const previousWidth = image.width;
+      image.url = nextUrl;
+      image.naturalWidth = canvas.width;
+      image.naturalHeight = canvas.height;
+      image.aspect = canvas.width / canvas.height;
+
+      if (options.updateDisplaySize) {
+        image.width = Math.max(28, previousWidth);
+        image.height = image.width / image.aspect;
+        clampImagePosition(image);
+      }
+
+      const elementImage = els.imageLayer.querySelector(`[data-image-id="${image.id}"] img`);
+      if (elementImage) {
+        elementImage.src = nextUrl;
+      }
+      syncImageElement(image);
+      renderGroupSelection();
+      renderConnectors();
+      closeImageEditor();
+    }
+
+    function getRoundedEditorSelection() {
+      const image = getEditorImage();
+      if (!state.editor || !image) {
+        return null;
+      }
+
+      const selection = clampEditorSelection(state.editor.selection);
+      const x = Math.round(selection.x);
+      const y = Math.round(selection.y);
+      const width = Math.max(1, Math.min(image.naturalWidth - x, Math.round(selection.width)));
+      const height = Math.max(1, Math.min(image.naturalHeight - y, Math.round(selection.height)));
+      return { x, y, width, height };
+    }
+
+    function addRoundedRectPath(context, x, y, width, height, radius) {
+      const safeRadius = clamp(radius, 0, Math.min(width, height) / 2);
+      context.beginPath();
+      context.moveTo(x + safeRadius, y);
+      context.lineTo(x + width - safeRadius, y);
+      context.arcTo(x + width, y, x + width, y + safeRadius, safeRadius);
+      context.lineTo(x + width, y + height - safeRadius);
+      context.arcTo(x + width, y + height, x + width - safeRadius, y + height, safeRadius);
+      context.lineTo(x + safeRadius, y + height);
+      context.arcTo(x, y + height, x, y + height - safeRadius, safeRadius);
+      context.lineTo(x, y + safeRadius);
+      context.arcTo(x, y, x + safeRadius, y, safeRadius);
+      context.closePath();
+    }
+
+    async function applyCrop() {
+      const image = getEditorImage();
+      const selection = getRoundedEditorSelection();
+      if (!image || !selection) {
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      const source = await loadCanvasImage(image.url);
+      const canvas = document.createElement("canvas");
+      canvas.width = selection.width;
+      canvas.height = selection.height;
+      const context = canvas.getContext("2d");
+      const radius = Math.min(state.editor?.cropRadius || 0, selection.width / 2, selection.height / 2);
+      if (radius > 0) {
+        addRoundedRectPath(context, 0, 0, selection.width, selection.height, radius);
+        context.clip();
+      }
+      context.drawImage(source, selection.x, selection.y, selection.width, selection.height, 0, 0, selection.width, selection.height);
+      await replaceImageAsset(image, canvas, { updateDisplaySize: true, undoSnapshot });
+    }
+
+    async function applySpotlight() {
+      const image = getEditorImage();
+      const selection = getRoundedEditorSelection();
+      if (!image || !selection || !state.editor) {
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      const source = await loadCanvasImage(image.url);
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d");
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      context.fillStyle = `rgba(0, 0, 0, ${state.editor.mask})`;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      if (isEditorSelectionVisible()) {
+        context.save();
+        addRoundedRectPath(context, selection.x, selection.y, selection.width, selection.height, state.editor.spotlightRadius);
+        context.clip();
+        context.drawImage(source, 0, 0, canvas.width, canvas.height);
+        context.restore();
+      }
+
+      const zoomRect = getSpotlightZoomRect(selection);
+      if (zoomRect) {
+        context.save();
+        addRoundedRectPath(context, zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height, state.editor.spotlightRadius * zoomRect.scale);
+        context.clip();
+        context.drawImage(
+          source,
+          selection.x,
+          selection.y,
+          selection.width,
+          selection.height,
+          zoomRect.x,
+          zoomRect.y,
+          zoomRect.width,
+          zoomRect.height
+        );
+        context.restore();
+      }
+      await replaceImageAsset(image, canvas, { undoSnapshot });
+    }
+
+    function getCanvasFrame() {
+      return {
+        left: state.x,
+        top: state.y,
+        right: state.x + state.width,
+        bottom: state.y + state.height,
+        width: state.width,
+        height: state.height
+      };
+    }
+
+    function frameFromEdges(edges) {
+      return {
+        left: edges.left,
+        top: edges.top,
+        right: edges.right,
+        bottom: edges.bottom,
+        width: edges.right - edges.left,
+        height: edges.bottom - edges.top
+      };
+    }
+
+    function constrainResizeFrame(edges, drag) {
+      const limits = getCanvasViewportLimits();
+      let { left, top, right, bottom } = edges;
+
+      if (drag.sign.x > 0) {
+        right = clamp(right, left + state.minWidth, left + limits.maxWidth);
+      } else {
+        left = clamp(left, right - limits.maxWidth, right - state.minWidth);
+      }
+
+      if (drag.sign.y > 0) {
+        bottom = clamp(bottom, top + state.minHeight, top + limits.maxHeight);
+      } else {
+        top = clamp(top, bottom - limits.maxHeight, bottom - state.minHeight);
+      }
+
+      return { left, top, right, bottom };
+    }
+
+    function getCanvasResizeTargets(drag) {
+      const xTargets = [];
+      const yTargets = [];
+
+      drag.startImages.forEach((image) => {
+        const left = drag.startLeft + image.x;
+        const right = left + image.width;
+        const top = drag.startTop + image.y;
+        const bottom = top + image.height;
+
+        xTargets.push(
+          { value: left, kind: "size" },
+          { value: right, kind: "size" }
+        );
+        yTargets.push(
+          { value: top, kind: "size" },
+          { value: bottom, kind: "size" }
+        );
+      });
+
+      return { xTargets, yTargets };
+    }
+
+    function snapCanvasResizeFrame(edges, drag) {
+      const targets = getCanvasResizeTargets(drag);
+      const snaps = [];
+      const next = { ...edges };
+
+      if (drag.sign.x > 0) {
+        const xSnap = findBestSnap([next.right], targets.xTargets);
+        if (xSnap) {
+          next.right += xSnap.delta;
+          snaps.push({ axis: "x", edge: "right", value: xSnap.value, kind: xSnap.kind });
+        }
+      } else {
+        const xSnap = findBestSnap([next.left], targets.xTargets);
+        if (xSnap) {
+          next.left += xSnap.delta;
+          snaps.push({ axis: "x", edge: "left", value: xSnap.value, kind: xSnap.kind });
+        }
+      }
+
+      if (drag.sign.y > 0) {
+        const ySnap = findBestSnap([next.bottom], targets.yTargets);
+        if (ySnap) {
+          next.bottom += ySnap.delta;
+          snaps.push({ axis: "y", edge: "bottom", value: ySnap.value, kind: ySnap.kind });
+        }
+      } else {
+        const ySnap = findBestSnap([next.top], targets.yTargets);
+        if (ySnap) {
+          next.top += ySnap.delta;
+          snaps.push({ axis: "y", edge: "top", value: ySnap.value, kind: ySnap.kind });
+        }
+      }
+
+      return { edges: next, snaps };
+    }
+
+    function getCanvasResizeGuides(snaps, frame) {
+      return snaps
+        .filter((snap) => {
+          if (snap.axis === "x") {
+            const edgeValue = snap.edge === "left" ? frame.left : frame.right;
+            return Math.abs(edgeValue - snap.value) < 0.5;
+          }
+
+          const edgeValue = snap.edge === "top" ? frame.top : frame.bottom;
+          return Math.abs(edgeValue - snap.value) < 0.5;
+        })
+        .map((snap) => ({
+          axis: snap.axis,
+          value: snap.axis === "x" ? snap.value - frame.left : snap.value - frame.top,
+          kind: snap.kind
+        }))
+        .filter((guide) => {
+          if (guide.axis === "x") {
+            return guide.value >= 0 && guide.value <= frame.width;
+          }
+          return guide.value >= 0 && guide.value <= frame.height;
+        });
+    }
+
+    function syncImagesToCanvasFrame(frame, drag) {
+      drag.startImages.forEach((startImage) => {
+        const image = getImageById(startImage.id);
+        if (!image) {
+          return;
+        }
+
+        image.x = drag.startLeft + startImage.x - frame.left;
+        image.y = drag.startTop + startImage.y - frame.top;
+        syncImageElement(image);
+      });
+    }
+
+    function applyCanvasFrame(frame, drag) {
+      state.x = frame.left;
+      state.y = frame.top;
+      state.width = frame.width;
+      state.height = frame.height;
+
+      if (drag?.startImages) {
+        syncImagesToCanvasFrame(frame, drag);
+      }
+
+      renderCanvas();
+    }
+
+    function startResize(event) {
+      if (state.canvasDrag || state.imageDrag) {
+        return;
+      }
+
+      const handle = event.currentTarget;
+
+      event.preventDefault();
+      handle.setPointerCapture(event.pointerId);
+      els.shell.classList.add("is-resizing");
+      state.canvasDrag = {
+        type: "resize",
+        pointerId: event.pointerId,
+        undoSnapshot: createUndoSnapshot(),
+        hasChanged: false,
+        startY: event.clientY,
+        startHeight: state.height
+      };
+    }
+
+    function moveResize(event) {
+      if (!state.canvasDrag || state.canvasDrag.type !== "resize" || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      const drag = state.canvasDrag;
+      const deltaY = event.clientY - drag.startY;
+      const rawHeight = drag.startHeight + deltaY;
+      const yTargets = [];
+      state.images.forEach((image) => {
+        yTargets.push(
+          { value: image.y, kind: "size" },
+          { value: image.y + image.height, kind: "size" }
+        );
+      });
+
+      let nextHeight = clamp(rawHeight, state.minHeight, state.maxHeight);
+      const ySnap = findBestSnap([nextHeight], yTargets);
+      if (ySnap) {
+        nextHeight = clamp(nextHeight + ySnap.delta, state.minHeight, state.maxHeight);
+      }
+
+      state.height = nextHeight;
+      drag.hasChanged = true;
+      renderCanvas();
+      renderGuides(ySnap ? [{ axis: "y", value: ySnap.value, kind: ySnap.kind }] : []);
+    }
+
+    function endResize(event) {
+      if (!state.canvasDrag || state.canvasDrag.type !== "resize" || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      const handle = document.querySelector(".resize-handle");
+      if (handle && handle.hasPointerCapture(event.pointerId)) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+
+      const drag = state.canvasDrag;
+      state.canvasDrag = null;
+      els.shell.classList.remove("is-resizing");
+      clearGuides();
+      if (drag.hasChanged) {
+        commitUndoSnapshot(drag.undoSnapshot);
+      }
+      renderCanvas();
+    }
+
+    function isMultiSelectEvent(event) {
+      return state.modifierSelect || event.shiftKey || event.metaKey || event.ctrlKey;
+    }
+
+    function getImagesBounds(images) {
+      if (!images.length) {
+        return null;
+      }
+
+      const left = Math.min(...images.map((image) => image.x));
+      const top = Math.min(...images.map((image) => image.y));
+      const right = Math.max(...images.map((image) => image.x + image.width));
+      const bottom = Math.max(...images.map((image) => image.y + image.height));
+      return {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top
+      };
+    }
+
+    function clampGroupDelta(bounds) {
+      let deltaX = 0;
+      let deltaY = 0;
+
+      if (bounds.width <= state.width) {
+        if (bounds.x < 0) deltaX = -bounds.x;
+        if (bounds.x + bounds.width > state.width) deltaX = state.width - bounds.width - bounds.x;
+      }
+      if (bounds.height <= state.height) {
+        if (bounds.y < 0) deltaY = -bounds.y;
+        if (bounds.y + bounds.height > state.height) deltaY = state.height - bounds.height - bounds.y;
+      }
+
+      return { deltaX, deltaY };
+    }
+
+    function startImageMove(event) {
+      if (event.target.closest(".image-resize-handle")) {
+        return;
+      }
+
+      const element = event.currentTarget;
+      const imageId = Number(element.dataset.imageId);
+      const image = getImageById(imageId);
+      if (!image) {
+        return;
+      }
+
+      if (state.tool === "connect") {
+        handleConnectorSurfacePointerDown(event);
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      event.preventDefault();
+      event.stopPropagation();
+      if (isMultiSelectEvent(event)) {
+        toggleImageSelection(image.id);
+        return;
+      }
+
+      if (!isImageSelected(image.id)) {
+        selectImage(image.id);
+      } else {
+        bringImagesToFront(getSelectedIds());
+        renderSelectionState();
+      }
+
+      element.setPointerCapture(event.pointerId);
+      const selectedIds = getSelectedIds();
+      const startImages = selectedIds
+        .map(getImageById)
+        .filter(Boolean)
+        .map((selectedImage) => ({ ...selectedImage }));
+      state.imageDrag = {
+        pointerId: event.pointerId,
+        type: "move",
+        imageId: image.id,
+        selectedIds,
+        undoSnapshot,
+        hasChanged: false,
+        startPoint: getCanvasPoint(event),
+        startImage: { ...image },
+        startImages,
+        startBounds: getImagesBounds(startImages)
+      };
+      renderSelectionState();
+    }
+
+    function startImageResize(event) {
+      if (state.tool === "connect") {
+        return;
+      }
+
+      const handle = event.currentTarget;
+      const element = handle.closest(".canvas-image");
+      const imageId = Number(element.dataset.imageId);
+      const image = getImageById(imageId);
+      if (!image) {
+        return;
+      }
+
+      const corner = handle.dataset.corner;
+      const sign = getSign(corner);
+      const anchorX = sign.x > 0 ? image.x : image.x + image.width;
+      const anchorY = sign.y > 0 ? image.y : image.y + image.height;
+
+      const undoSnapshot = createUndoSnapshot();
+      event.preventDefault();
+      event.stopPropagation();
+      selectImage(image.id);
+      handle.setPointerCapture(event.pointerId);
+      state.imageDrag = {
+        pointerId: event.pointerId,
+        type: "resize",
+        imageId: image.id,
+        corner,
+        sign,
+        undoSnapshot,
+        hasChanged: false,
+        anchorX,
+        anchorY,
+        startImage: { ...image }
+      };
+      syncImageElement(image);
+    }
+
+    function startGroupResize(event) {
+      if (state.tool === "connect") {
+        return;
+      }
+
+      const selectedIds = getSelectedIds();
+      if (selectedIds.length < 2) {
+        return;
+      }
+
+      const startImages = selectedIds
+        .map(getImageById)
+        .filter(Boolean)
+        .map((image) => ({ ...image }));
+      const startBounds = getImagesBounds(startImages);
+      if (!startBounds) {
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      const handle = event.currentTarget;
+      const corner = handle.dataset.corner;
+      const sign = getSign(corner);
+      const anchorX = sign.x > 0 ? startBounds.x : startBounds.x + startBounds.width;
+      const anchorY = sign.y > 0 ? startBounds.y : startBounds.y + startBounds.height;
+
+      event.preventDefault();
+      event.stopPropagation();
+      handle.setPointerCapture(event.pointerId);
+      bringImagesToFront(selectedIds);
+      state.imageDrag = {
+        pointerId: event.pointerId,
+        type: "group-resize",
+        selectedIds,
+        corner,
+        sign,
+        undoSnapshot,
+        hasChanged: false,
+        anchorX,
+        anchorY,
+        startBounds,
+        startImages
+      };
+      renderSelectionState();
+    }
+
+    function moveImage(point) {
+      const drag = state.imageDrag;
+      const selectedIds = drag.selectedIds || [drag.imageId];
+      const startImages = drag.startImages || [drag.startImage];
+      const selectedImages = selectedIds.map(getImageById).filter(Boolean);
+      if (!selectedImages.length) {
+        return;
+      }
+
+      const deltaX = point.x - drag.startPoint.x;
+      const deltaY = point.y - drag.startPoint.y;
+      const proposedBounds = {
+        x: drag.startBounds.x + deltaX,
+        y: drag.startBounds.y + deltaY,
+        width: drag.startBounds.width,
+        height: drag.startBounds.height
+      };
+      const snapped = snapRectPosition({ ...proposedBounds }, selectedIds);
+      const edgeClamp = clampGroupDelta(snapped.rect);
+      const finalDeltaX = deltaX + (snapped.rect.x - proposedBounds.x) + edgeClamp.deltaX;
+      const finalDeltaY = deltaY + (snapped.rect.y - proposedBounds.y) + edgeClamp.deltaY;
+      drag.hasChanged = true;
+
+      startImages.forEach((startImage) => {
+        const image = getImageById(startImage.id);
+        if (!image) {
+          return;
+        }
+        image.x = startImage.x + finalDeltaX;
+        image.y = startImage.y + finalDeltaY;
+        syncImageElement(image);
+      });
+      renderGroupSelection();
+      renderConnectors();
+      renderGuides(snapped.guides);
+    }
+
+    function snapImageScale(scale, drag, minScale, maxScale) {
+      const currentWidth = drag.startImage.width * scale;
+      const currentHeight = drag.startImage.height * scale;
+      let best = null;
+
+      getOtherImages(drag.imageId).forEach((otherImage) => {
+        const widthScale = otherImage.width / drag.startImage.width;
+        const widthDistance = Math.abs(currentWidth - otherImage.width);
+        if (widthScale >= minScale && widthScale <= maxScale && widthDistance <= snapThreshold) {
+          best = !best || widthDistance < best.distance
+            ? { scale: widthScale, distance: widthDistance, snap: "width" }
+            : best;
+        }
+
+        const heightScale = otherImage.height / drag.startImage.height;
+        const heightDistance = Math.abs(currentHeight - otherImage.height);
+        if (heightScale >= minScale && heightScale <= maxScale && heightDistance <= snapThreshold) {
+          best = !best || heightDistance < best.distance
+            ? { scale: heightScale, distance: heightDistance, snap: "height" }
+            : best;
+        }
+      });
+
+      return best || { scale, snap: null };
+    }
+
+    function getSizeGuides(rect, snapKind) {
+      if (snapKind === "width") {
+        return [
+          { axis: "x", value: rect.x, kind: "size" },
+          { axis: "x", value: rect.x + rect.width, kind: "size" }
+        ];
+      }
+      if (snapKind === "height") {
+        return [
+          { axis: "y", value: rect.y, kind: "size" },
+          { axis: "y", value: rect.y + rect.height, kind: "size" }
+        ];
+      }
+      return [];
+    }
+
+    function snapGroupScale(scale, drag, minScale, maxScale) {
+      const currentWidth = drag.startBounds.width * scale;
+      const currentHeight = drag.startBounds.height * scale;
+      let best = null;
+
+      getOtherImages(drag.selectedIds).forEach((otherImage) => {
+        const widthScale = otherImage.width / drag.startBounds.width;
+        const widthDistance = Math.abs(currentWidth - otherImage.width);
+        if (widthScale >= minScale && widthScale <= maxScale && widthDistance <= snapThreshold) {
+          best = !best || widthDistance < best.distance
+            ? { scale: widthScale, distance: widthDistance, snap: "width" }
+            : best;
+        }
+
+        const heightScale = otherImage.height / drag.startBounds.height;
+        const heightDistance = Math.abs(currentHeight - otherImage.height);
+        if (heightScale >= minScale && heightScale <= maxScale && heightDistance <= snapThreshold) {
+          best = !best || heightDistance < best.distance
+            ? { scale: heightScale, distance: heightDistance, snap: "height" }
+            : best;
+        }
+      });
+
+      return best || { scale, snap: null };
+    }
+
+    function resizeGroup(point) {
+      const drag = state.imageDrag;
+      const minScale = Math.max(
+        0.08,
+        ...drag.startImages.map((image) => Math.max(28 / image.width, 28 / image.height))
+      );
+      const maxWidth = drag.sign.x > 0 ? state.width - drag.anchorX : drag.anchorX;
+      const maxHeight = drag.sign.y > 0 ? state.height - drag.anchorY : drag.anchorY;
+      const maxScale = Math.max(minScale, Math.min(maxWidth / drag.startBounds.width, maxHeight / drag.startBounds.height));
+      const rawWidth = drag.sign.x > 0 ? point.x - drag.anchorX : drag.anchorX - point.x;
+      const rawHeight = drag.sign.y > 0 ? point.y - drag.anchorY : drag.anchorY - point.y;
+      const desiredScale = Math.max(rawWidth / drag.startBounds.width, rawHeight / drag.startBounds.height);
+      const baseScale = clamp(desiredScale, minScale, maxScale);
+      const snapped = snapGroupScale(baseScale, drag, minScale, maxScale);
+      const scale = snapped.scale;
+      drag.hasChanged = true;
+
+      drag.startImages.forEach((startImage) => {
+        const image = getImageById(startImage.id);
+        if (!image) {
+          return;
+        }
+
+        image.x = drag.anchorX + (startImage.x - drag.anchorX) * scale;
+        image.y = drag.anchorY + (startImage.y - drag.anchorY) * scale;
+        image.width = startImage.width * scale;
+        image.height = startImage.height * scale;
+        syncImageElement(image);
+      });
+
+      renderGroupSelection();
+      renderConnectors();
+      const bounds = getSelectionBounds(drag.selectedIds);
+      renderGuides(getSizeGuides(bounds, snapped.snap));
+    }
+
+    function resizeImage(point) {
+      const drag = state.imageDrag;
+      const image = getImageById(drag.imageId);
+      if (!image) {
+        return;
+      }
+
+      const minSize = 28;
+      const maxWidth = drag.sign.x > 0 ? state.width - drag.anchorX : drag.anchorX;
+      const maxHeight = drag.sign.y > 0 ? state.height - drag.anchorY : drag.anchorY;
+      const minScale = Math.max(minSize / drag.startImage.width, minSize / drag.startImage.height);
+      const maxScale = Math.max(minScale, Math.min(maxWidth / drag.startImage.width, maxHeight / drag.startImage.height));
+      const rawWidth = drag.sign.x > 0 ? point.x - drag.anchorX : drag.anchorX - point.x;
+      const rawHeight = drag.sign.y > 0 ? point.y - drag.anchorY : drag.anchorY - point.y;
+      const desiredScale = Math.max(rawWidth / drag.startImage.width, rawHeight / drag.startImage.height);
+      const baseScale = clamp(desiredScale, minScale, maxScale);
+      const snapped = snapImageScale(baseScale, drag, minScale, maxScale);
+      const scale = snapped.scale;
+      drag.hasChanged = true;
+
+      image.width = drag.startImage.width * scale;
+      image.height = drag.startImage.height * scale;
+      image.x = drag.sign.x > 0 ? drag.anchorX : drag.anchorX - image.width;
+      image.y = drag.sign.y > 0 ? drag.anchorY : drag.anchorY - image.height;
+      clampImagePosition(image);
+      syncImageElement(image);
+      renderConnectors();
+      renderGuides(getSizeGuides(image, snapped.snap));
+    }
+
+    function continueImageInteraction(event) {
+      if (!state.imageDrag || event.pointerId !== state.imageDrag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getCanvasPoint(event);
+      if (state.imageDrag.type === "move") {
+        moveImage(point);
+      } else if (state.imageDrag.type === "group-resize") {
+        resizeGroup(point);
+      } else {
+        resizeImage(point);
+      }
+    }
+
+    function endImageInteraction(event) {
+      if (!state.imageDrag || event.pointerId !== state.imageDrag.pointerId) {
+        return;
+      }
+
+      const drag = state.imageDrag;
+      const image = getImageById(drag.imageId);
+      state.imageDrag = null;
+      if (image) {
+        syncImageElement(image);
+      }
+      renderConnectors();
+      clearGuides();
+      if (drag.hasChanged) {
+        commitUndoSnapshot(drag.undoSnapshot);
+      }
+    }
+
+    function shouldUseNativeUndo(event) {
+      const target = event.target;
+      if (!target?.matches) {
+        return false;
+      }
+
+      if (target.matches("textarea, [contenteditable='true']")) {
+        return true;
+      }
+
+      if (!target.matches("input")) {
+        return false;
+      }
+
+      return !["button", "checkbox", "file", "radio", "range"].includes(target.type);
+    }
+
+    function isUndoKeyboardEvent(event) {
+      return (event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z";
+    }
+
+    function handleKeyDown(event) {
+      const target = event.target;
+      const isEditable = target?.matches?.("input, textarea, select, [contenteditable='true']");
+
+      if (isUndoKeyboardEvent(event) && !shouldUseNativeUndo(event)) {
+        event.preventDefault();
+        undoLastAction();
+        return;
+      }
+
+      if (state.editor) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          if (hideSpotlightSelection()) {
+            return;
+          }
+          closeImageEditor();
+        }
+        return;
+      }
+
+      if (event.key === "Shift" || event.key === "Meta" || event.key === "Control") {
+        state.modifierSelect = true;
+      }
+
+      if (event.key === "Enter" && state.editingConnectorId && !isEditable) {
+        event.preventDefault();
+        endConnectorEdit();
+        return;
+      }
+
+      const isDeleteKey = event.key === "Delete" || event.key === "Backspace";
+      if (!isDeleteKey || isEditable) {
+        return;
+      }
+
+      if (deleteSelectedConnectorNode()) {
+        event.preventDefault();
+        return;
+      }
+
+      if (state.selectedConnectorId) {
+        deleteConnector(state.selectedConnectorId);
+        event.preventDefault();
+        return;
+      }
+
+      if (deleteSelectedImage()) {
+        event.preventDefault();
+      }
+    }
+
+    function handleKeyUp(event) {
+      if (event.key === "Shift" || event.key === "Meta" || event.key === "Control") {
+        state.modifierSelect = event.shiftKey || event.metaKey || event.ctrlKey;
+      }
+    }
+
+    function startCanvasMove(event) {
+      if (state.canvasDrag || state.imageDrag || state.connectorDrag) {
+        return;
+      }
+
+      event.preventDefault();
+      els.canvas.setPointerCapture(event.pointerId);
+      els.shell.classList.add("is-moving");
+      state.canvasDrag = {
+        type: "move",
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startLeft: state.x,
+        startTop: state.y
+      };
+    }
+
+    function moveCanvas(event) {
+      if (!state.canvasDrag || state.canvasDrag.type !== "move" || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      const deltaX = event.clientX - state.canvasDrag.startX;
+      const deltaY = event.clientY - state.canvasDrag.startY;
+      state.x = state.canvasDrag.startLeft + deltaX;
+      state.y = state.canvasDrag.startTop + deltaY;
+      clampCanvasPosition();
+      renderCanvas();
+    }
+
+    function endCanvasMove(event) {
+      if (!state.canvasDrag || state.canvasDrag.type !== "move" || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      if (els.canvas.hasPointerCapture(event.pointerId)) {
+        els.canvas.releasePointerCapture(event.pointerId);
+      }
+      state.canvasDrag = null;
+      els.shell.classList.remove("is-moving");
+      renderCanvas();
+    }
+
+    function continueCanvasInteraction(event) {
+      if (!state.canvasDrag || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      if (state.canvasDrag.type === "move") {
+        moveCanvas(event);
+      } else {
+        moveResize(event);
+      }
+    }
+
+    function endCanvasInteraction(event) {
+      if (!state.canvasDrag || event.pointerId !== state.canvasDrag.pointerId) {
+        return;
+      }
+
+      if (state.canvasDrag.type === "move") {
+        endCanvasMove(event);
+      } else {
+        endResize(event);
+      }
+    }
+
+    function handleCanvasPointerDown(event) {
+      if (event.button !== 0) {
+        return;
+      }
+      if (state.tool === "connect") {
+        handleConnectorSurfacePointerDown(event);
+        return;
+      }
+      if (event.target.closest(".canvas-image, .image-resize-handle, .group-resize-handle")) {
+        return;
+      }
+
+      clearSelection();
+      clearConnectorSelection();
+      clearGuides();
+    }
+
+    document.querySelectorAll(".resize-handle").forEach((handle) => {
+      handle.addEventListener("pointerdown", startResize);
+    });
+
+    document.querySelectorAll(".group-resize-handle").forEach((handle) => {
+      handle.addEventListener("pointerdown", startGroupResize);
+    });
+
+    els.imageInput.addEventListener("change", (event) => {
+      uploadImages(event.target.files);
+    });
+    els.downloadCanvasButton.addEventListener("click", downloadCanvasPng);
+    els.copyCanvasButton.addEventListener("click", copyCanvasPng);
+    els.selectToolButton.addEventListener("click", () => setTool("select"));
+    els.connectToolButton.addEventListener("click", () => setTool("connect"));
+    els.backgroundLightButton.addEventListener("click", () => setCanvasBackground("light"));
+    els.backgroundDarkButton.addEventListener("click", () => setCanvasBackground("dark"));
+    els.canvas.addEventListener("pointerdown", handleCanvasPointerDown);
+    els.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    els.editorClose.addEventListener("click", closeImageEditor);
+    els.cropModeButton.addEventListener("click", () => setEditorMode("crop"));
+    els.spotlightModeButton.addEventListener("click", () => setEditorMode("spotlight"));
+    els.maskRange.addEventListener("input", () => {
+      if (!state.editor) {
+        return;
+      }
+      state.editor.mask = Number(els.maskRange.value) / 100;
+      els.maskValue.textContent = `${els.maskRange.value}%`;
+      renderEditorSelection();
+    });
+    els.cropRadiusRange.addEventListener("input", () => {
+      if (!state.editor) {
+        return;
+      }
+      state.editor.cropRadius = Number(els.cropRadiusRange.value);
+      els.cropRadiusValue.textContent = `${els.cropRadiusRange.value}px`;
+      renderEditorSelection();
+    });
+    els.spotlightRadiusRange.addEventListener("input", () => {
+      if (!state.editor) {
+        return;
+      }
+      state.editor.spotlightRadius = Number(els.spotlightRadiusRange.value);
+      els.spotlightRadiusValue.textContent = `${els.spotlightRadiusRange.value}px`;
+      renderEditorSelection();
+    });
+    els.spotlightZoomRange.addEventListener("input", () => {
+      if (!state.editor) {
+        return;
+      }
+      state.editor.spotlightZoom = Number(els.spotlightZoomRange.value) / 100;
+      els.spotlightZoomValue.textContent = `${els.spotlightZoomRange.value}%`;
+      if (state.editor.spotlightZoom <= 1) {
+        state.editor.zoomX = null;
+        state.editor.zoomY = null;
+        state.editor.zoomMoved = false;
+      }
+      renderEditorSelection();
+    });
+    els.resetSelectionButton.addEventListener("click", resetEditorSelection);
+    els.applyCropButton.addEventListener("click", applyCrop);
+    els.applySpotlightButton.addEventListener("click", applySpotlight);
+    els.editorImage.addEventListener("load", renderEditorSelection);
+    els.editorStage.addEventListener("dblclick", handleEditorStageDoubleClick);
+    els.editorSelection.addEventListener("pointerdown", startEditorSelectionMove);
+    els.spotlightZoomLayer.addEventListener("pointerdown", startSpotlightZoomMove);
+    els.editorSelection.querySelectorAll(".editor-selection-handle").forEach((handle) => {
+      handle.addEventListener("pointerdown", startEditorSelectionResize);
+    });
+
+    window.addEventListener("pointermove", continueCanvasInteraction);
+    window.addEventListener("pointerup", endCanvasInteraction);
+    window.addEventListener("pointercancel", endCanvasInteraction);
+    window.addEventListener("pointermove", continueImageInteraction);
+    window.addEventListener("pointerup", endImageInteraction);
+    window.addEventListener("pointercancel", endImageInteraction);
+    window.addEventListener("pointermove", continueConnectorInteraction);
+    window.addEventListener("pointerup", endConnectorInteraction);
+    window.addEventListener("pointercancel", endConnectorInteraction);
+    window.addEventListener("pointermove", continueEditorInteraction);
+    window.addEventListener("pointerup", endEditorInteraction);
+    window.addEventListener("pointercancel", endEditorInteraction);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", () => {
+      state.modifierSelect = false;
+    });
+    window.addEventListener("resize", () => {
+      renderCanvas();
+      renderEditorSelection();
+    });
+    window.addEventListener("beforeunload", () => {
+      getReferencedImageUrls().forEach((url) => {
+        if (url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    });
+
+    window.__canvasGenerator = {
+      getState: () => ({
+        x: Math.round(state.x),
+        y: Math.round(state.y),
+        width: Math.round(state.width),
+        height: Math.round(state.height),
+        imageCount: state.images.length,
+        tool: state.tool,
+        canvasBackground: state.canvasBackground,
+        canvasBackgroundColor: getCanvasBackgroundColor(),
+        connectorCount: state.connectors.length,
+        connectorNodeCount: state.connectorNodes.length,
+        editingConnectorId: state.editingConnectorId,
+        selectedConnectorNodeId: state.selectedConnectorNodeId,
+        connectorNodes: state.connectorNodes.map((node) => ({
+          id: node.id,
+          x: Math.round(node.x),
+          y: Math.round(node.y),
+          selected: node.id === state.selectedConnectorNodeId
+        })),
+        connectors: state.connectors.map((connector) => {
+          const points = getConnectorPoints(connector);
+          const start = points[0] || { x: 0, y: 0 };
+          const end = points[points.length - 1] || { x: 0, y: 0 };
+          return {
+            id: connector.id,
+            nodeIds: [...connector.nodeIds],
+            points: points.map((point) => ({
+              x: Math.round(point.x),
+              y: Math.round(point.y)
+            })),
+            start: {
+              x: Math.round(start.x),
+              y: Math.round(start.y)
+            },
+            end: {
+              x: Math.round(end.x),
+              y: Math.round(end.y)
+            },
+            selected: connector.id === state.selectedConnectorId
+          };
+        }),
+        isConnecting: Boolean(state.connectorDrag || state.editingConnectorId),
+        selectedImageIds: getSelectedIds(),
+        selectedImageId: state.selectedImageId,
+        images: state.images.map((image) => ({
+          id: image.id,
+          x: Math.round(image.x),
+          y: Math.round(image.y),
+          width: Math.round(image.width),
+          height: Math.round(image.height),
+          naturalWidth: Math.round(image.naturalWidth),
+          naturalHeight: Math.round(image.naturalHeight),
+          aspect: Number(image.aspect.toFixed(4)),
+          z: image.z
+        })),
+        guides: state.activeGuides.map((guide) => ({
+          axis: guide.axis,
+          value: Math.round(guide.value),
+          kind: guide.kind
+        })),
+        center: {
+          x: Math.round(window.innerWidth / 2),
+          y: Math.round(window.innerHeight / 2)
+        },
+        isMovingCanvas: state.canvasDrag?.type === "move",
+        isResizing: state.canvasDrag?.type === "resize",
+        isEditingImage: Boolean(state.imageDrag),
+        editorOpen: Boolean(state.editor),
+        editorMode: state.editor?.mode || null,
+        editorSelectionVisible: state.editor ? isEditorSelectionVisible() : null,
+        editorRadius: state.editor ? getActiveEditorRadius() : null,
+        editorCropRadius: state.editor?.cropRadius ?? null,
+        editorSpotlightRadius: state.editor?.spotlightRadius ?? null,
+        editorSpotlightZoom: state.editor?.spotlightZoom ?? null,
+        editorZoom: state.editor && Number.isFinite(state.editor.zoomX) && Number.isFinite(state.editor.zoomY) ? {
+          x: Math.round(state.editor.zoomX),
+          y: Math.round(state.editor.zoomY),
+          moved: Boolean(state.editor.zoomMoved)
+        } : null,
+        editorSelection: state.editor ? {
+          x: Math.round(state.editor.selection.x),
+          y: Math.round(state.editor.selection.y),
+          width: Math.round(state.editor.selection.width),
+          height: Math.round(state.editor.selection.height)
+        } : null
+      }),
+      deleteSelected: deleteSelectedImage
+    };
+
+    renderCanvas();
+  </script>
+</body>
+</html>
