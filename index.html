@@ -52,11 +52,15 @@
 
     .app {
       position: relative;
-      width: max(100vw, 814px);
+      display: grid;
+      grid-template-columns: 132px minmax(750px, 1fr) 178px;
+      column-gap: 56px;
+      align-items: start;
+      width: max(100vw, 1240px);
       min-height: 100vh;
       height: auto;
-      min-width: 814px;
-      padding: 88px 32px 140px;
+      min-width: 1240px;
+      padding: 86px 44px 120px;
       overflow: visible;
     }
 
@@ -96,14 +100,130 @@
       text-align: center;
     }
 
+    .hud-divider {
+      width: 1px;
+      height: 22px;
+      background: var(--line);
+    }
+
+    .hud-radius {
+      display: grid;
+      grid-template-columns: auto auto minmax(140px, 200px);
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-radius-value {
+      min-width: 36px;
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .hud-range {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .left-panel {
+      position: sticky;
+      top: 150px;
+      z-index: 24;
+      display: grid;
+      gap: 24px;
+      justify-items: center;
+      width: 132px;
+      padding: 18px 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 16px 44px rgba(15, 15, 16, 0.1);
+      backdrop-filter: blur(18px);
+      align-self: start;
+      user-select: none;
+    }
+
+    .left-panel-group {
+      display: grid;
+      gap: 10px;
+      width: 112px;
+    }
+
+    .left-panel-group + .left-panel-group {
+      padding-top: 24px;
+      border-top: 1px solid rgba(15, 15, 16, 0.16);
+    }
+
+    .left-panel-extra {
+      display: grid;
+      gap: 8px;
+      width: 112px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(15, 15, 16, 0.16);
+    }
+
+    .panel-title {
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .right-panel {
+      position: sticky;
+      top: 72px;
+      z-index: 24;
+      width: 178px;
+      padding: 18px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 16px 44px rgba(15, 15, 16, 0.1);
+      backdrop-filter: blur(18px);
+      user-select: none;
+    }
+
+    .parameter-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .parameter-group + .parameter-group {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(15, 15, 16, 0.16);
+    }
+
+    .parameter-title {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .parameter-value {
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .canvas-radius-control {
+      display: grid;
+      gap: 10px;
+    }
+
     .workspace {
       position: relative;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
       width: 100%;
-      min-height: calc(100vh - 228px);
+      min-height: auto;
       overflow: visible;
     }
 
@@ -118,7 +238,11 @@
 
     .usage-rules {
       width: 750px;
-      margin-top: 34px;
+      margin-top: 68px;
+      padding: 16px 24px;
+      border: 1px solid rgba(15, 15, 16, 0.16);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.46);
       color: rgba(15, 15, 16, 0.38);
       font-size: 12px;
       line-height: 1.7;
@@ -227,6 +351,42 @@
     }
 
     .connector-node:active {
+      cursor: grabbing;
+    }
+
+    .marker-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .canvas-marker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: #ffffff;
+      background: var(--primary);
+      font-size: 20px;
+      line-height: 1;
+      font-weight: 800;
+      text-align: center;
+      cursor: grab;
+      pointer-events: auto;
+      touch-action: none;
+      transform: translate(-50%, -50%);
+      user-select: none;
+    }
+
+    .canvas-marker.is-selected {
+      box-shadow: 0 0 0 3px rgba(254, 44, 85, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.88);
+    }
+
+    .canvas-marker.is-dragging {
       cursor: grabbing;
     }
 
@@ -474,12 +634,24 @@
       box-shadow: 0 24px 70px rgba(254, 44, 85, 0.14);
     }
 
+    .canvas-shell.is-marking .canvas {
+      cursor: copy;
+      border-color: var(--primary);
+      box-shadow: 0 24px 70px rgba(254, 44, 85, 0.12);
+    }
+
     .canvas-shell.is-connecting .canvas-image {
       cursor: crosshair;
     }
 
+    .canvas-shell.is-marking .canvas-image {
+      cursor: copy;
+    }
+
     .canvas-shell.is-connecting .image-resize-handle,
-    .canvas-shell.is-connecting .group-resize-handle {
+    .canvas-shell.is-marking .image-resize-handle,
+    .canvas-shell.is-connecting .group-resize-handle,
+    .canvas-shell.is-marking .group-resize-handle {
       display: none !important;
     }
 
@@ -489,20 +661,15 @@
     }
 
     .tool-bar {
-      position: fixed;
-      right: 14px;
-      top: 84px;
-      z-index: 30;
       display: grid;
-      gap: 10px;
+      gap: 8px;
       width: 112px;
-      padding: 8px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--panel);
-      box-shadow: 0 14px 42px rgba(15, 15, 16, 0.12);
-      backdrop-filter: blur(18px);
-      pointer-events: none;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .tool-section {
@@ -511,8 +678,8 @@
     }
 
     .tool-section + .tool-section {
-      padding-top: 10px;
-      border-top: 1px solid rgba(15, 15, 16, 0.1);
+      padding-top: 0;
+      border-top: 0;
     }
 
     .tool-section-title {
@@ -595,49 +762,52 @@
       border-color: rgba(255, 255, 255, 0.86);
     }
 
+    .right-panel .background-option {
+      width: 100%;
+      min-height: 34px;
+    }
+
+    .right-panel .hud-range {
+      width: 100%;
+      margin-top: 2px;
+    }
+
     .upload-bar {
-      position: fixed;
-      left: 50%;
-      bottom: max(18px, env(safe-area-inset-bottom));
-      z-index: 30;
-      width: min(560px, calc(100vw - 32px));
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      background: var(--panel);
-      box-shadow: 0 14px 38px rgba(15, 15, 16, 0.12);
-      backdrop-filter: blur(16px);
-      transform: translateX(-50%);
-      display: flex;
-      align-items: center;
+      width: 112px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      display: grid;
       gap: 8px;
     }
 
     .upload-button {
-      flex: 1 1 180px;
-      min-width: 140px;
-      height: 48px;
+      width: 100%;
+      min-height: 38px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 999px;
       color: #ffffff;
       background: #000000;
-      font-size: 16px;
-      line-height: 1.4;
-      font-weight: 700;
+      font-size: 12px;
+      line-height: 1.2;
+      font-weight: 800;
       user-select: none;
     }
 
     .export-button {
-      flex: 0 0 92px;
-      height: 48px;
+      width: 100%;
+      min-height: 38px;
       border: 1px solid rgba(15, 15, 16, 0.08);
       border-radius: 999px;
       color: var(--ink);
       background: #e7e7e7;
-      font-size: 14px;
-      line-height: 1.3;
+      font-size: 12px;
+      line-height: 1.2;
       font-weight: 800;
       transition: transform 160ms ease, background 160ms ease, color 160ms ease;
     }
@@ -947,6 +1117,268 @@
       font-weight: 600;
     }
 
+    .locale-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      display: grid;
+      place-items: center;
+      padding: 34px;
+      background: rgba(15, 15, 16, 0.46);
+    }
+
+    .locale-dialog {
+      position: relative;
+      width: min(1080px, calc(100vw - 68px));
+      height: min(720px, calc(100vh - 68px));
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      gap: 22px;
+      padding: 26px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 28px 90px rgba(15, 15, 16, 0.34);
+    }
+
+    .locale-close {
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      z-index: 2;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      color: var(--ink);
+      background: #ffffff;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(15, 15, 16, 0.1);
+    }
+
+    .locale-stage {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 42px 18px 18px;
+      border: 1px solid rgba(15, 15, 16, 0.14);
+      border-radius: 18px;
+      background:
+        linear-gradient(90deg, rgba(32, 213, 236, 0.07) 1px, transparent 1px),
+        linear-gradient(rgba(32, 213, 236, 0.07) 1px, transparent 1px),
+        #f7f8fa;
+      background-size: 28px 28px;
+      overflow: hidden;
+    }
+
+    .locale-preview-frame {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      line-height: 0;
+      box-shadow: 0 14px 38px rgba(15, 15, 16, 0.14);
+    }
+
+    .locale-preview-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 180px);
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .locale-selection {
+      position: absolute;
+      z-index: 2;
+      border: 1.5px solid var(--primary);
+      background: rgba(254, 44, 85, 0.08);
+      box-shadow: 0 0 0 9999px rgba(15, 15, 16, 0.18);
+      cursor: move;
+      touch-action: none;
+    }
+
+    .locale-selection-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: var(--primary);
+      box-shadow: none;
+      touch-action: none;
+    }
+
+    .locale-selection-handle[data-corner="nw"] {
+      left: -6px;
+      top: -6px;
+      cursor: nwse-resize;
+    }
+
+    .locale-selection-handle[data-corner="ne"] {
+      right: -6px;
+      top: -6px;
+      cursor: nesw-resize;
+    }
+
+    .locale-selection-handle[data-corner="se"] {
+      right: -6px;
+      bottom: -6px;
+      cursor: nwse-resize;
+    }
+
+    .locale-selection-handle[data-corner="sw"] {
+      left: -6px;
+      bottom: -6px;
+      cursor: nesw-resize;
+    }
+
+    .locale-controls {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .locale-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 900;
+    }
+
+    .locale-tabs {
+      min-width: 0;
+      display: flex;
+      gap: 8px;
+      padding-bottom: 2px;
+      overflow-x: auto;
+    }
+
+    .locale-tab {
+      min-width: 66px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid rgba(15, 15, 16, 0.16);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #ffffff;
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .locale-tab.is-active {
+      border-color: var(--ink);
+      color: #ffffff;
+      background: var(--ink);
+    }
+
+    .locale-panel {
+      min-height: 0;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+      padding: 18px;
+      border: 1px solid rgba(15, 15, 16, 0.14);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.56);
+      overflow: auto;
+    }
+
+    .locale-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .locale-label {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .locale-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
+    .locale-textarea,
+    .locale-number,
+    .locale-select {
+      width: 100%;
+      border: 1px solid rgba(15, 15, 16, 0.16);
+      border-radius: 12px;
+      color: var(--ink);
+      background: #ffffff;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .locale-textarea {
+      min-height: 150px;
+      padding: 12px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .locale-number,
+    .locale-select {
+      height: 38px;
+      padding: 0 10px;
+    }
+
+    .locale-color-row,
+    .locale-inline-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .locale-color {
+      width: 52px;
+      height: 38px;
+      padding: 4px;
+      border: 1px solid rgba(15, 15, 16, 0.16);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .locale-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .locale-action {
+      min-height: 48px;
+      border-radius: 999px;
+      color: #ffffff;
+      background: var(--primary);
+      font-size: 15px;
+      line-height: 1.3;
+      font-weight: 900;
+    }
+
+    .locale-secondary {
+      min-height: 42px;
+      border: 1px solid rgba(15, 15, 16, 0.18);
+      border-radius: 999px;
+      color: var(--ink);
+      background: #ffffff;
+      font-size: 13px;
+      line-height: 1.3;
+      font-weight: 800;
+    }
+
     @media (max-width: 560px) {
       .hud {
         top: 12px;
@@ -980,18 +1412,45 @@
 </head>
 <body>
   <main class="app">
-    <section class="hud" aria-label="Canvas size">
-      <span class="hud-label">Canvas</span>
-      <span id="sizeValue" class="hud-value">320 x 420 px</span>
-    </section>
+    <aside class="left-panel" aria-label="核心操作">
+      <div class="left-panel-group">
+        <span class="panel-title">基础功能</span>
+        <section class="upload-bar" aria-label="Upload images">
+          <label class="upload-button">
+            上传图片
+            <input id="imageInput" class="upload-input" type="file" accept="image/*" multiple>
+          </label>
+          <button id="downloadCanvasButton" class="export-button" type="button">下载图片</button>
+          <button id="copyCanvasButton" class="export-button" type="button">复制图片</button>
+        </section>
+      </div>
+
+      <div class="left-panel-group">
+        <span class="panel-title">更多功能</span>
+        <section class="tool-bar" aria-label="Canvas tools">
+          <div class="tool-section" aria-label="工具">
+            <button id="selectToolButton" class="tool-button is-active" type="button">选择</button>
+            <button id="connectToolButton" class="tool-button" type="button">自由连线</button>
+          </div>
+          <div class="tool-section" aria-label="数字标注">
+            <button id="markerToolButton" class="tool-button" type="button" aria-pressed="false">数字标注</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="left-panel-extra" aria-label="多语言功能">
+        <button id="localeToolButton" class="tool-button" type="button">多语言</button>
+      </div>
+    </aside>
 
     <section class="workspace" aria-label="Canvas workspace">
       <div id="canvasShell" class="canvas-shell">
-        <div id="canvas" class="canvas" role="img" aria-label="Draggable resizable canvas">
-          <svg id="connectorLayer" class="connector-layer" aria-hidden="true"></svg>
-          <div id="imageLayer" class="image-layer" aria-label="Uploaded images"></div>
-          <div id="groupSelection" class="group-selection" hidden>
-            <button class="group-resize-handle" data-corner="nw" type="button" aria-label="Resize selected images from top left"></button>
+          <div id="canvas" class="canvas" role="img" aria-label="Draggable resizable canvas">
+            <svg id="connectorLayer" class="connector-layer" aria-hidden="true"></svg>
+            <div id="imageLayer" class="image-layer" aria-label="Uploaded images"></div>
+            <div id="markerLayer" class="marker-layer" aria-label="Number annotations"></div>
+            <div id="groupSelection" class="group-selection" hidden>
+              <button class="group-resize-handle" data-corner="nw" type="button" aria-label="Resize selected images from top left"></button>
             <button class="group-resize-handle" data-corner="ne" type="button" aria-label="Resize selected images from top right"></button>
             <button class="group-resize-handle" data-corner="se" type="button" aria-label="Resize selected images from bottom right"></button>
             <button class="group-resize-handle" data-corner="sw" type="button" aria-label="Resize selected images from bottom left"></button>
@@ -1011,30 +1470,48 @@
               <li>双击连线重新进入编辑模式</li>
             </ul>
           </li>
+          <li>数字标注功能
+            <ul>
+              <li>点击Enter结束绘制</li>
+              <li>选中某个标注，可使用Delete键删除该标注</li>
+            </ul>
+          </li>
+          <li>多语言功能
+            <ul>
+              <li>建议将所有内容编辑完成后，进行多语言编辑。在多语言模式下，不支持其他功能。</li>
+              <li>多语言可在目标区域绘制选区，填写key后将自动替换内容。</li>
+              <li>key的撰写必须符合设计要求。</li>
+              <li>支持绘制多个选区进行多语言替换。支持Delete键删除选区。</li>
+            </ul>
+          </li>
         </ol>
       </div>
     </section>
 
-    <section class="tool-bar" aria-label="Canvas tools">
-      <div class="tool-section" aria-label="工具">
-        <button id="selectToolButton" class="tool-button is-active" type="button">选择</button>
-        <button id="connectToolButton" class="tool-button" type="button">自由连线</button>
+    <aside class="right-panel" aria-label="画布参数">
+      <div class="parameter-group" aria-label="画布大小">
+        <span class="parameter-title">画布大小</span>
+        <span id="sizeValue" class="parameter-value">750 x 420 px</span>
       </div>
-      <div class="tool-section" aria-label="画布背景色">
-        <span class="tool-section-title">画布背景色</span>
+
+      <div class="parameter-group canvas-radius-control">
+        <label class="parameter-title" for="canvasRadiusRange">画布倒角</label>
+        <span id="canvasRadiusValue" class="parameter-value">20px</span>
+        <input id="canvasRadiusRange" class="hud-range" type="range" min="0" max="100" value="20" aria-label="Canvas corner radius">
+      </div>
+
+      <div class="parameter-group" aria-label="画布背景色">
+        <span class="parameter-title">画布背景色</span>
         <button id="backgroundLightButton" class="background-option is-active" data-background="light" type="button" aria-pressed="true">浅色</button>
         <button id="backgroundDarkButton" class="background-option" data-background="dark" type="button" aria-pressed="false">深色</button>
       </div>
-    </section>
 
-    <section class="upload-bar" aria-label="Upload images">
-      <label class="upload-button">
-        Upload images
-        <input id="imageInput" class="upload-input" type="file" accept="image/*" multiple>
-      </label>
-      <button id="downloadCanvasButton" class="export-button" type="button">Download</button>
-      <button id="copyCanvasButton" class="export-button" type="button">Copy</button>
-    </section>
+      <div class="parameter-group" aria-label="画布背景透明度">
+        <label class="parameter-title" for="canvasOpacityRange">画布背景透明度</label>
+        <span id="canvasOpacityValue" class="parameter-value">80%</span>
+        <input id="canvasOpacityRange" class="hud-range" type="range" min="0" max="100" value="80" aria-label="Canvas background opacity">
+      </div>
+    </aside>
 
     <section id="imageEditor" class="editor-overlay" aria-label="Image editor" hidden>
       <div class="editor-dialog" role="dialog" aria-modal="true" aria-label="Image editor">
@@ -1063,15 +1540,15 @@
 
           <div class="editor-settings-panel">
             <div id="cropControls" class="editor-control-group">
-              <span class="editor-label">Corner Radius <span id="cropRadiusValue">0px</span></span>
-              <input id="cropRadiusRange" class="editor-range" type="range" min="0" max="300" value="0">
+              <span class="editor-label">Corner Radius <span id="cropRadiusValue">20px</span></span>
+              <input id="cropRadiusRange" class="editor-range" type="range" min="0" max="300" value="20">
             </div>
 
             <div id="spotlightControls" class="editor-control-group" hidden>
               <span class="editor-label">Mask Opacity <span id="maskValue">75%</span></span>
               <input id="maskRange" class="editor-range" type="range" min="20" max="90" value="75">
-              <span class="editor-label">Corner Radius <span id="spotlightRadiusValue">0px</span></span>
-              <input id="spotlightRadiusRange" class="editor-range" type="range" min="0" max="300" value="0">
+              <span class="editor-label">Corner Radius <span id="spotlightRadiusValue">20px</span></span>
+              <input id="spotlightRadiusRange" class="editor-range" type="range" min="0" max="300" value="20">
               <span class="editor-label">Magnify <span id="spotlightZoomValue">100%</span></span>
               <input id="spotlightZoomRange" class="editor-range" type="range" min="100" max="300" step="5" value="100">
             </div>
@@ -1095,6 +1572,80 @@
         </aside>
       </div>
     </section>
+
+    <section id="localeEditor" class="locale-overlay" aria-label="多语言图片生成" hidden>
+      <div class="locale-dialog" role="dialog" aria-modal="true" aria-label="多语言图片生成">
+        <button id="localeClose" class="locale-close" type="button" aria-label="关闭多语言弹窗">×</button>
+        <div id="localeStage" class="locale-stage">
+          <div id="localePreviewFrame" class="locale-preview-frame">
+            <canvas id="localePreviewCanvas" class="locale-preview-canvas"></canvas>
+            <div id="localeSelection" class="locale-selection" hidden>
+              <button class="locale-selection-handle" data-corner="nw" type="button" aria-label="Resize locale selection from top left"></button>
+              <button class="locale-selection-handle" data-corner="ne" type="button" aria-label="Resize locale selection from top right"></button>
+              <button class="locale-selection-handle" data-corner="se" type="button" aria-label="Resize locale selection from bottom right"></button>
+              <button class="locale-selection-handle" data-corner="sw" type="button" aria-label="Resize locale selection from bottom left"></button>
+            </div>
+          </div>
+        </div>
+        <aside class="locale-controls">
+          <h2 class="locale-title">多语言</h2>
+          <div id="localeTabs" class="locale-tabs" role="tablist" aria-label="多语言选区"></div>
+          <div class="locale-panel">
+            <div class="locale-field">
+              <span class="locale-label">选区</span>
+              <p id="localeSelectionMeta" class="locale-meta">在左侧画布中拖拽框选文字区域</p>
+            </div>
+
+            <div class="locale-field">
+              <label class="locale-label" for="localeTextInput">多语言 Key</label>
+              <textarea id="localeTextInput" class="locale-textarea" spellcheck="false" placeholder="English | Subscribe now&#10;日本語 | 今すぐ登録&#10;한국어 | 지금 구독"></textarea>
+            </div>
+
+            <div class="locale-field">
+              <label class="locale-label" for="localeTextColor">字体颜色</label>
+              <div class="locale-color-row">
+                <input id="localeTextColor" class="locale-color" type="color" value="#0f0f10">
+                <p class="locale-meta">应用到所有语言图片</p>
+              </div>
+            </div>
+
+            <div class="locale-field">
+              <label class="locale-label" for="localeFontSize">字体大小</label>
+              <div class="locale-inline-row">
+                <input id="localeFontSize" class="locale-number" type="number" min="8" max="160" value="24">
+                <p class="locale-meta">px</p>
+              </div>
+            </div>
+
+            <div class="locale-field">
+              <label class="locale-label" for="localeFontWeight">字重</label>
+              <select id="localeFontWeight" class="locale-select">
+                <option value="400">Regular 400</option>
+                <option value="500">Medium 500</option>
+                <option value="600">Semi Bold 600</option>
+                <option value="700">Bold 700</option>
+                <option value="800" selected>Extra Bold 800</option>
+                <option value="900">Black 900</option>
+              </select>
+            </div>
+
+            <div class="locale-field">
+              <label class="locale-label" for="localeTextAlign">对齐方式</label>
+              <select id="localeTextAlign" class="locale-select">
+                <option value="center">居中</option>
+                <option value="left">左对齐</option>
+                <option value="right">右对齐</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="locale-actions">
+            <button id="localeResetSelection" class="locale-secondary" type="button">重置选区</button>
+            <button id="localeSaveButton" class="locale-action" type="button">保存多语言图片</button>
+          </div>
+        </aside>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -1107,6 +1658,7 @@
       minHeight: 240,
       maxWidth: 750,
       maxHeight: 6000,
+      canvasRadius: 20,
       images: [],
       selectedImageIds: [],
       selectedImageId: null,
@@ -1114,6 +1666,7 @@
       maxZ: 1,
       tool: "select",
       canvasBackground: "light",
+      canvasBackgroundOpacity: 0.8,
       connectors: [],
       nextConnectorId: 1,
       connectorNodes: [],
@@ -1122,12 +1675,25 @@
       selectedConnectorNodeId: null,
       editingConnectorId: null,
       lastConnectorClick: null,
+      markers: [],
+      nextMarkerId: 1,
+      nextMarkerNumber: 1,
+      selectedMarkerId: null,
+      markerDrag: null,
       connectorDrag: null,
       canvasDrag: null,
       imageDrag: null,
       undoStack: [],
       editor: null,
       editorDrag: null,
+      locale: {
+        open: false,
+        baseCanvas: null,
+        regions: [],
+        activeRegionId: null,
+        nextRegionId: 1,
+        drag: null
+      },
       activeGuides: [],
       modifierSelect: false
     };
@@ -1137,6 +1703,7 @@
       canvas: document.getElementById("canvas"),
       connectorLayer: document.getElementById("connectorLayer"),
       imageLayer: document.getElementById("imageLayer"),
+      markerLayer: document.getElementById("markerLayer"),
       groupSelection: document.getElementById("groupSelection"),
       guideLayer: document.getElementById("guideLayer"),
       imageInput: document.getElementById("imageInput"),
@@ -1144,9 +1711,15 @@
       copyCanvasButton: document.getElementById("copyCanvasButton"),
       selectToolButton: document.getElementById("selectToolButton"),
       connectToolButton: document.getElementById("connectToolButton"),
+      markerToolButton: document.getElementById("markerToolButton"),
+      localeToolButton: document.getElementById("localeToolButton"),
       backgroundLightButton: document.getElementById("backgroundLightButton"),
       backgroundDarkButton: document.getElementById("backgroundDarkButton"),
       sizeValue: document.getElementById("sizeValue"),
+      canvasRadiusRange: document.getElementById("canvasRadiusRange"),
+      canvasRadiusValue: document.getElementById("canvasRadiusValue"),
+      canvasOpacityRange: document.getElementById("canvasOpacityRange"),
+      canvasOpacityValue: document.getElementById("canvasOpacityValue"),
       imageEditor: document.getElementById("imageEditor"),
       editorClose: document.getElementById("editorClose"),
       editorStage: document.getElementById("editorStage"),
@@ -1172,12 +1745,30 @@
       spotlightZoomValue: document.getElementById("spotlightZoomValue"),
       resetSelectionButton: document.getElementById("resetSelectionButton"),
       applyCropButton: document.getElementById("applyCropButton"),
-      applySpotlightButton: document.getElementById("applySpotlightButton")
+      applySpotlightButton: document.getElementById("applySpotlightButton"),
+      localeEditor: document.getElementById("localeEditor"),
+      localeClose: document.getElementById("localeClose"),
+      localeStage: document.getElementById("localeStage"),
+      localePreviewFrame: document.getElementById("localePreviewFrame"),
+      localePreviewCanvas: document.getElementById("localePreviewCanvas"),
+      localeSelection: document.getElementById("localeSelection"),
+      localeTabs: document.getElementById("localeTabs"),
+      localeSelectionMeta: document.getElementById("localeSelectionMeta"),
+      localeTextInput: document.getElementById("localeTextInput"),
+      localeTextColor: document.getElementById("localeTextColor"),
+      localeFontSize: document.getElementById("localeFontSize"),
+      localeFontWeight: document.getElementById("localeFontWeight"),
+      localeTextAlign: document.getElementById("localeTextAlign"),
+      localeResetSelection: document.getElementById("localeResetSelection"),
+      localeSaveButton: document.getElementById("localeSaveButton")
     };
 
+    const defaultEditorRadius = 20;
     const snapThreshold = 7;
     const connectorGridSize = 32 / 3;
     const undoLimit = 80;
+    let canvasRadiusUndoSnapshot = null;
+    let canvasOpacityUndoSnapshot = null;
 
     function clamp(value, min, max) {
       return Math.min(Math.max(value, min), max);
@@ -1191,6 +1782,7 @@
       return {
         width: state.width,
         height: state.height,
+        canvasRadius: state.canvasRadius,
         images: state.images.map((image) => ({ ...image })),
         selectedImageIds: [...state.selectedImageIds],
         selectedImageId: state.selectedImageId,
@@ -1198,6 +1790,7 @@
         maxZ: state.maxZ,
         tool: state.tool,
         canvasBackground: state.canvasBackground,
+        canvasBackgroundOpacity: state.canvasBackgroundOpacity,
         connectors: state.connectors.map((connector) => ({
           id: connector.id,
           nodeIds: [...connector.nodeIds]
@@ -1207,7 +1800,11 @@
         nextConnectorNodeId: state.nextConnectorNodeId,
         selectedConnectorId: state.selectedConnectorId,
         selectedConnectorNodeId: state.selectedConnectorNodeId,
-        editingConnectorId: state.editingConnectorId
+        editingConnectorId: state.editingConnectorId,
+        markers: state.markers.map((marker) => ({ ...marker })),
+        nextMarkerId: state.nextMarkerId,
+        nextMarkerNumber: state.nextMarkerNumber,
+        selectedMarkerId: state.selectedMarkerId
       };
     }
 
@@ -1272,6 +1869,7 @@
 
       state.width = snapshot.width;
       state.height = snapshot.height;
+      state.canvasRadius = snapshot.canvasRadius ?? 20;
       state.images = snapshot.images.map((image) => ({ ...image }));
       state.selectedImageIds = [...snapshot.selectedImageIds];
       state.selectedImageId = snapshot.selectedImageId;
@@ -1279,6 +1877,7 @@
       state.maxZ = snapshot.maxZ;
       state.tool = snapshot.tool;
       state.canvasBackground = snapshot.canvasBackground || "light";
+      state.canvasBackgroundOpacity = snapshot.canvasBackgroundOpacity ?? 0.8;
       state.connectors = snapshot.connectors.map((connector) => ({
         id: connector.id,
         nodeIds: [...connector.nodeIds]
@@ -1289,10 +1888,17 @@
       state.selectedConnectorId = snapshot.selectedConnectorId;
       state.selectedConnectorNodeId = snapshot.selectedConnectorNodeId;
       state.editingConnectorId = snapshot.editingConnectorId;
+      state.markers = (snapshot.markers || []).map((marker) => ({ ...marker }));
+      state.nextMarkerId = snapshot.nextMarkerId || 1;
+      state.nextMarkerNumber = snapshot.nextMarkerNumber || 1;
+      state.selectedMarkerId = snapshot.selectedMarkerId || null;
       state.canvasDrag = null;
       state.imageDrag = null;
       state.connectorDrag = null;
+      state.markerDrag = null;
       state.lastConnectorClick = null;
+      canvasRadiusUndoSnapshot = null;
+      canvasOpacityUndoSnapshot = null;
 
       closeImageEditor();
       clearGuides();
@@ -1302,11 +1908,12 @@
       renderSelectionState();
       renderToolState();
       renderConnectors();
+      renderMarkers();
       revokeUnreferencedImageUrls(previousUrls, [snapshot]);
     }
 
     function undoLastAction() {
-      if (state.canvasDrag || state.imageDrag || state.connectorDrag || !state.undoStack.length) {
+      if (state.canvasDrag || state.imageDrag || state.connectorDrag || state.markerDrag || !state.undoStack.length) {
         return false;
       }
 
@@ -1473,13 +2080,29 @@
       return state.canvasBackground === "dark" ? "#000000" : "#FFFFFF";
     }
 
+    function getCanvasBackgroundPaint() {
+      const channel = state.canvasBackground === "dark" ? 0 : 255;
+      const opacity = clamp(Number(state.canvasBackgroundOpacity) || 0, 0, 1);
+      return `rgba(${channel}, ${channel}, ${channel}, ${opacity})`;
+    }
+
     function renderCanvasBackgroundState() {
       const isDark = state.canvasBackground === "dark";
-      els.canvas.style.setProperty("--canvas", getCanvasBackgroundColor());
+      state.canvasBackgroundOpacity = clamp(Number(state.canvasBackgroundOpacity) || 0, 0, 1);
+      els.canvas.style.setProperty("--canvas", getCanvasBackgroundPaint());
       els.backgroundLightButton.classList.toggle("is-active", !isDark);
       els.backgroundDarkButton.classList.toggle("is-active", isDark);
       els.backgroundLightButton.setAttribute("aria-pressed", String(!isDark));
       els.backgroundDarkButton.setAttribute("aria-pressed", String(isDark));
+      els.canvasOpacityRange.value = Math.round(state.canvasBackgroundOpacity * 100);
+      els.canvasOpacityValue.textContent = `${Math.round(state.canvasBackgroundOpacity * 100)}%`;
+    }
+
+    function renderCanvasRadiusState() {
+      state.canvasRadius = clamp(Number(state.canvasRadius) || 0, 0, 100);
+      els.canvas.style.borderRadius = `${Math.round(state.canvasRadius)}px`;
+      els.canvasRadiusRange.value = Math.round(state.canvasRadius);
+      els.canvasRadiusValue.textContent = `${Math.round(state.canvasRadius)}px`;
     }
 
     function renderCanvas() {
@@ -1496,8 +2119,10 @@
       state.images.forEach(syncImageElement);
       renderGroupSelection();
       renderConnectors();
+      renderMarkers();
       renderToolState();
       renderCanvasBackgroundState();
+      renderCanvasRadiusState();
       const sizeText = `${Math.round(state.width)} x ${Math.round(state.height)} px`;
       els.sizeValue.textContent = sizeText;
     }
@@ -1519,15 +2144,19 @@
 
     function renderToolState() {
       const isConnecting = state.tool === "connect";
+      const isMarking = state.tool === "marker";
       els.shell.classList.toggle("is-connecting", isConnecting);
-      els.selectToolButton.classList.toggle("is-active", !isConnecting);
+      els.shell.classList.toggle("is-marking", isMarking);
+      els.selectToolButton.classList.toggle("is-active", state.tool === "select");
       els.connectToolButton.classList.toggle("is-active", isConnecting);
-      els.selectToolButton.setAttribute("aria-pressed", String(!isConnecting));
+      els.markerToolButton.classList.toggle("is-active", isMarking);
+      els.selectToolButton.setAttribute("aria-pressed", String(state.tool === "select"));
       els.connectToolButton.setAttribute("aria-pressed", String(isConnecting));
+      els.markerToolButton.setAttribute("aria-pressed", String(isMarking));
     }
 
     function setTool(tool) {
-      state.tool = tool === "connect" ? "connect" : "select";
+      state.tool = tool === "connect" || tool === "marker" ? tool : "select";
       state.connectorDrag = null;
       state.editingConnectorId = null;
       state.selectedConnectorNodeId = null;
@@ -1546,6 +2175,213 @@
       state.canvasBackground = nextBackground;
       pushUndoSnapshot(undoSnapshot);
       renderCanvas();
+    }
+
+    function beginCanvasRadiusChange() {
+      if (!canvasRadiusUndoSnapshot) {
+        canvasRadiusUndoSnapshot = createUndoSnapshot();
+      }
+    }
+
+    function updateCanvasRadius(value) {
+      state.canvasRadius = clamp(Number(value) || 0, 0, 100);
+      renderCanvasRadiusState();
+    }
+
+    function commitCanvasRadiusChange() {
+      if (!canvasRadiusUndoSnapshot) {
+        return;
+      }
+
+      commitUndoSnapshot(canvasRadiusUndoSnapshot);
+      canvasRadiusUndoSnapshot = null;
+    }
+
+    function beginCanvasOpacityChange() {
+      if (!canvasOpacityUndoSnapshot) {
+        canvasOpacityUndoSnapshot = createUndoSnapshot();
+      }
+    }
+
+    function updateCanvasOpacity(value) {
+      state.canvasBackgroundOpacity = clamp((Number(value) || 0) / 100, 0, 1);
+      renderCanvasBackgroundState();
+    }
+
+    function commitCanvasOpacityChange() {
+      if (!canvasOpacityUndoSnapshot) {
+        return;
+      }
+
+      commitUndoSnapshot(canvasOpacityUndoSnapshot);
+      canvasOpacityUndoSnapshot = null;
+    }
+
+    function getMarkerById(id) {
+      return state.markers.find((marker) => marker.id === id) || null;
+    }
+
+    function clampMarkerPosition(marker) {
+      const radius = 16;
+      marker.x = clamp(marker.x, radius, state.width - radius);
+      marker.y = clamp(marker.y, radius, state.height - radius);
+    }
+
+    function syncMarkerElement(marker) {
+      const element = els.markerLayer.querySelector(`[data-marker-id="${marker.id}"]`);
+      if (!element) {
+        return;
+      }
+
+      element.style.left = `${marker.x}px`;
+      element.style.top = `${marker.y}px`;
+      element.textContent = marker.number;
+      element.classList.toggle("is-selected", marker.id === state.selectedMarkerId);
+      element.classList.toggle("is-dragging", state.markerDrag?.markerId === marker.id);
+    }
+
+    function renderMarkerElement(marker) {
+      const element = document.createElement("button");
+      element.className = "canvas-marker";
+      element.type = "button";
+      element.dataset.markerId = marker.id;
+      element.setAttribute("aria-label", `Number annotation ${marker.number}`);
+      element.addEventListener("pointerdown", startMarkerMove);
+      els.markerLayer.appendChild(element);
+      syncMarkerElement(marker);
+    }
+
+    function renderMarkers() {
+      els.markerLayer.replaceChildren();
+      state.markers.forEach((marker) => {
+        clampMarkerPosition(marker);
+        renderMarkerElement(marker);
+      });
+    }
+
+    function clearMarkerSelection() {
+      state.selectedMarkerId = null;
+      state.markers.forEach(syncMarkerElement);
+    }
+
+    function selectMarker(markerId) {
+      const marker = getMarkerById(markerId);
+      if (!marker) {
+        clearMarkerSelection();
+        return;
+      }
+
+      state.selectedMarkerId = marker.id;
+      setSelection([], { raise: false, clearMarker: false });
+      clearConnectorSelection();
+      state.markers.forEach(syncMarkerElement);
+    }
+
+    function addMarkerAt(point) {
+      const undoSnapshot = createUndoSnapshot();
+      const marker = {
+        id: state.nextMarkerId,
+        number: state.nextMarkerNumber,
+        x: point.x,
+        y: point.y
+      };
+      clampMarkerPosition(marker);
+      state.nextMarkerId += 1;
+      state.nextMarkerNumber += 1;
+      state.markers.push(marker);
+      state.selectedMarkerId = marker.id;
+      setSelection([], { raise: false, clearMarker: false });
+      clearConnectorSelection();
+      renderMarkers();
+      pushUndoSnapshot(undoSnapshot);
+    }
+
+    function handleMarkerSurfacePointerDown(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      addMarkerAt(getCanvasPoint(event));
+    }
+
+    function startMarkerMove(event) {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const markerId = Number(event.currentTarget.dataset.markerId);
+      const marker = getMarkerById(markerId);
+      if (!marker) {
+        return;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      event.preventDefault();
+      event.stopPropagation();
+      selectMarker(marker.id);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      state.markerDrag = {
+        pointerId: event.pointerId,
+        markerId: marker.id,
+        undoSnapshot,
+        hasChanged: false,
+        startPoint: getCanvasPoint(event),
+        startMarker: { ...marker }
+      };
+      syncMarkerElement(marker);
+    }
+
+    function continueMarkerInteraction(event) {
+      if (!state.markerDrag || event.pointerId !== state.markerDrag.pointerId) {
+        return;
+      }
+
+      const drag = state.markerDrag;
+      const marker = getMarkerById(drag.markerId);
+      if (!marker) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getCanvasPoint(event);
+      marker.x = drag.startMarker.x + point.x - drag.startPoint.x;
+      marker.y = drag.startMarker.y + point.y - drag.startPoint.y;
+      clampMarkerPosition(marker);
+      drag.hasChanged = true;
+      syncMarkerElement(marker);
+    }
+
+    function endMarkerInteraction(event) {
+      if (!state.markerDrag || event.pointerId !== state.markerDrag.pointerId) {
+        return;
+      }
+
+      const drag = state.markerDrag;
+      const marker = getMarkerById(drag.markerId);
+      if (marker) {
+        syncMarkerElement(marker);
+      }
+      state.markerDrag = null;
+      if (drag.hasChanged) {
+        commitUndoSnapshot(drag.undoSnapshot);
+      }
+    }
+
+    function deleteSelectedMarker() {
+      if (!state.selectedMarkerId || state.markerDrag) {
+        return false;
+      }
+
+      const markerExists = Boolean(getMarkerById(state.selectedMarkerId));
+      if (!markerExists) {
+        state.selectedMarkerId = null;
+        return false;
+      }
+
+      const undoSnapshot = createUndoSnapshot();
+      state.markers = state.markers.filter((marker) => marker.id !== state.selectedMarkerId);
+      state.selectedMarkerId = null;
+      renderMarkers();
+      pushUndoSnapshot(undoSnapshot);
+      return true;
     }
 
     function getImageById(id) {
@@ -1613,6 +2449,40 @@
         x: clamp(Math.round(clamped.x / connectorGridSize) * connectorGridSize, 0, state.width),
         y: clamp(Math.round(clamped.y / connectorGridSize) * connectorGridSize, 0, state.height)
       };
+    }
+
+    function constrainPointToAxis(point, origin) {
+      if (!origin) {
+        return point;
+      }
+
+      const deltaX = Math.abs(point.x - origin.x);
+      const deltaY = Math.abs(point.y - origin.y);
+      return deltaX >= deltaY
+        ? { x: point.x, y: origin.y }
+        : { x: origin.x, y: point.y };
+    }
+
+    function getLastEditingConnectorPoint() {
+      const connector = getEditingConnector();
+      const points = connector ? getConnectorPoints(connector) : [];
+      return points[points.length - 1] || null;
+    }
+
+    function getConnectorNodeConstraintOrigin(nodeId) {
+      const connector = getEditingConnector();
+      if (!connector) {
+        return null;
+      }
+
+      const nodeIndex = connector.nodeIds.indexOf(nodeId);
+      if (nodeIndex < 0) {
+        return null;
+      }
+
+      const previousNode = getConnectorNodeById(connector.nodeIds[nodeIndex - 1]);
+      const nextNode = getConnectorNodeById(connector.nodeIds[nodeIndex + 1]);
+      return previousNode || nextNode || null;
     }
 
     function getConnectorPath(points) {
@@ -1693,7 +2563,9 @@
       state.selectedConnectorNodeId = null;
       state.selectedImageIds = [];
       state.selectedImageId = null;
+      state.selectedMarkerId = null;
       renderSelectionState();
+      state.markers.forEach(syncMarkerElement);
       renderConnectors();
     }
 
@@ -1702,7 +2574,9 @@
       state.selectedConnectorNodeId = null;
       state.selectedImageIds = [];
       state.selectedImageId = null;
+      state.selectedMarkerId = null;
       renderSelectionState();
+      state.markers.forEach(syncMarkerElement);
     }
 
     function selectConnectorNode(nodeId) {
@@ -1710,7 +2584,9 @@
       state.selectedConnectorNodeId = nodeId;
       state.selectedImageIds = [];
       state.selectedImageId = null;
+      state.selectedMarkerId = null;
       renderSelectionState();
+      state.markers.forEach(syncMarkerElement);
       renderConnectors();
     }
 
@@ -1719,7 +2595,9 @@
       state.selectedConnectorNodeId = nodeId;
       state.selectedImageIds = [];
       state.selectedImageId = null;
+      state.selectedMarkerId = null;
       renderSelectionState();
+      state.markers.forEach(syncMarkerElement);
     }
 
     function clearConnectorSelection(options = {}) {
@@ -1950,7 +2828,10 @@
     function handleConnectorSurfacePointerDown(event) {
       event.preventDefault();
       event.stopPropagation();
-      appendNodeToEditingConnector(getCanvasPoint(event));
+      const point = event.shiftKey
+        ? constrainPointToAxis(getCanvasPoint(event), getLastEditingConnectorPoint())
+        : getCanvasPoint(event);
+      appendNodeToEditingConnector(point);
     }
 
     function startConnectorNodePointerDown(event, nodeId) {
@@ -2053,10 +2934,14 @@
         }
         const deltaX = point.x - drag.startPoint.x;
         const deltaY = point.y - drag.startPoint.y;
-        const snappedPoint = snapConnectorPoint({
+        const rawPoint = {
           x: drag.startNode.x + deltaX,
           y: drag.startNode.y + deltaY
-        });
+        };
+        const constrainedPoint = event.shiftKey
+          ? constrainPointToAxis(rawPoint, getConnectorNodeConstraintOrigin(drag.nodeId))
+          : rawPoint;
+        const snappedPoint = snapConnectorPoint(constrainedPoint);
         node.x = snappedPoint.x;
         node.y = snappedPoint.y;
         drag.hasChanged = true;
@@ -2165,7 +3050,7 @@
 
       element.addEventListener("pointerdown", startImageMove);
       element.addEventListener("dblclick", (event) => {
-        if (state.tool === "connect") {
+        if (state.tool === "connect" || state.tool === "marker") {
           event.preventDefault();
           event.stopPropagation();
           return;
@@ -2199,7 +3084,7 @@
     }
 
     function setSelection(ids, options = {}) {
-      const { raise = true } = options;
+      const { raise = true, clearMarker = true } = options;
       const selectedIds = normalizeIds(ids).filter((id) => getImageById(id));
 
       if (raise && selectedIds.length) {
@@ -2211,6 +3096,10 @@
       state.selectedConnectorId = null;
       state.selectedConnectorNodeId = null;
       state.editingConnectorId = null;
+      if (clearMarker) {
+        state.selectedMarkerId = null;
+        state.markers.forEach(syncMarkerElement);
+      }
       renderSelectionState();
       renderConnectors();
     }
@@ -2676,8 +3565,8 @@
         imageId: image.id,
         mode: "crop",
         mask: Number(els.maskRange.value) / 100,
-        cropRadius: Number(els.cropRadiusRange.value),
-        spotlightRadius: Number(els.spotlightRadiusRange.value),
+        cropRadius: defaultEditorRadius,
+        spotlightRadius: defaultEditorRadius,
         spotlightZoom: 1,
         zoomX: null,
         zoomY: null,
@@ -2942,6 +3831,23 @@
       context.restore();
     }
 
+    function drawExportMarker(context, marker) {
+      context.save();
+      context.fillStyle = "#FE2C55";
+      context.beginPath();
+      context.arc(marker.x, marker.y, 16, 0, Math.PI * 2);
+      context.fill();
+
+      const digitCount = String(marker.number).length;
+      const fontSize = digitCount > 2 ? 14 : digitCount > 1 ? 17 : 20;
+      context.fillStyle = "#FFFFFF";
+      context.font = `800 ${fontSize}px Arial, Helvetica, sans-serif`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(String(marker.number), marker.x, marker.y + 1);
+      context.restore();
+    }
+
     async function renderCanvasExport() {
       const exportScale = getCanvasExportScale();
       const canvas = document.createElement("canvas");
@@ -2952,7 +3858,11 @@
       context.imageSmoothingQuality = "high";
       context.scale(exportScale, exportScale);
 
-      context.fillStyle = getCanvasBackgroundColor();
+      context.save();
+      addRoundedRectPath(context, 0, 0, state.width, state.height, state.canvasRadius);
+      context.clip();
+
+      context.fillStyle = getCanvasBackgroundPaint();
       context.fillRect(0, 0, state.width, state.height);
 
       const orderedImages = [...state.images].sort((first, second) => first.z - second.z);
@@ -2962,6 +3872,8 @@
       }
 
       state.connectors.forEach((connector) => drawExportConnector(context, connector));
+      state.markers.forEach((marker) => drawExportMarker(context, marker));
+      context.restore();
       return canvas;
     }
 
@@ -2972,6 +3884,528 @@
         throw new Error("PNG export failed.");
       }
       return blob;
+    }
+
+    function getLocaleDefaultRegionData() {
+      return {
+        text: "",
+        color: "#0f0f10",
+        fontSize: 24,
+        fontWeight: 800,
+        align: "center"
+      };
+    }
+
+    function getActiveLocaleRegion() {
+      return state.locale.regions.find((region) => region.id === state.locale.activeRegionId) || null;
+    }
+
+    function createLocaleRegion(selection) {
+      const region = {
+        id: state.locale.nextRegionId,
+        selection: clampLocaleSelection(selection),
+        ...getLocaleDefaultRegionData()
+      };
+      state.locale.nextRegionId += 1;
+      state.locale.regions.push(region);
+      state.locale.activeRegionId = region.id;
+      syncLocaleControlsFromRegion(region);
+      renderLocaleTabs();
+      return region;
+    }
+
+    function setActiveLocaleRegion(regionId) {
+      const region = state.locale.regions.find((item) => item.id === regionId) || null;
+      state.locale.activeRegionId = region ? region.id : null;
+      syncLocaleControlsFromRegion(region);
+      renderLocaleTabs();
+      renderLocalePreview();
+    }
+
+    function syncLocaleControlsFromRegion(region) {
+      const disabled = !region;
+      [els.localeTextInput, els.localeTextColor, els.localeFontSize, els.localeFontWeight, els.localeTextAlign].forEach((control) => {
+        control.disabled = disabled;
+      });
+
+      if (!region) {
+        const defaults = getLocaleDefaultRegionData();
+        els.localeTextInput.value = "";
+        els.localeTextColor.value = defaults.color;
+        els.localeFontSize.value = defaults.fontSize;
+        els.localeFontWeight.value = defaults.fontWeight;
+        els.localeTextAlign.value = defaults.align;
+        return;
+      }
+
+      els.localeTextInput.value = region.text;
+      els.localeTextColor.value = region.color;
+      els.localeFontSize.value = region.fontSize;
+      els.localeFontWeight.value = region.fontWeight;
+      els.localeTextAlign.value = region.align;
+    }
+
+    function updateActiveLocaleRegionFromControls() {
+      const region = getActiveLocaleRegion();
+      if (!region) {
+        return null;
+      }
+
+      region.text = els.localeTextInput.value;
+      region.color = els.localeTextColor.value || "#0f0f10";
+      region.fontSize = clamp(Number(els.localeFontSize.value) || 24, 8, 160);
+      region.fontWeight = clamp(Number(els.localeFontWeight.value) || 800, 100, 1000);
+      region.align = els.localeTextAlign.value || "center";
+      return region;
+    }
+
+    function renderLocaleTabs() {
+      els.localeTabs.innerHTML = "";
+      state.locale.regions.forEach((region, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `locale-tab${region.id === state.locale.activeRegionId ? " is-active" : ""}`;
+        button.textContent = `选区 ${index + 1}`;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", region.id === state.locale.activeRegionId ? "true" : "false");
+        button.addEventListener("click", () => setActiveLocaleRegion(region.id));
+        els.localeTabs.appendChild(button);
+      });
+    }
+
+    function renderLocalePreview() {
+      const baseCanvas = state.locale.baseCanvas;
+      if (!baseCanvas) {
+        return;
+      }
+
+      els.localePreviewCanvas.width = state.width;
+      els.localePreviewCanvas.height = state.height;
+      els.localePreviewCanvas.style.aspectRatio = `${state.width} / ${state.height}`;
+      const context = els.localePreviewCanvas.getContext("2d");
+      context.clearRect(0, 0, state.width, state.height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(baseCanvas, 0, 0, state.width, state.height);
+
+      state.locale.regions.forEach((region) => {
+        region.selection = clampLocaleSelection(region.selection);
+        const firstEntry = parseLocaleEntries(region.text)[0];
+        if (!region.selection || !firstEntry) {
+          return;
+        }
+
+        const options = getLocaleRenderOptions(1, region);
+        context.fillStyle = sampleEraseFill(context, region.selection, els.localePreviewCanvas);
+        context.fillRect(region.selection.x, region.selection.y, region.selection.width, region.selection.height);
+        drawLocaleText(context, firstEntry, region.selection, options);
+      });
+
+      renderLocaleSelection();
+    }
+
+    function getLocalePreviewPoint(event) {
+      const rect = els.localePreviewCanvas.getBoundingClientRect();
+      return {
+        x: clamp((event.clientX - rect.left) * (state.width / rect.width), 0, state.width),
+        y: clamp((event.clientY - rect.top) * (state.height / rect.height), 0, state.height)
+      };
+    }
+
+    function clampLocaleSelection(selection) {
+      if (!selection) {
+        return null;
+      }
+
+      const x = clamp(selection.x, 0, state.width);
+      const y = clamp(selection.y, 0, state.height);
+      const width = clamp(selection.width, 1, state.width - x);
+      const height = clamp(selection.height, 1, state.height - y);
+      return { x, y, width, height };
+    }
+
+    function renderLocaleSelection() {
+      const region = getActiveLocaleRegion();
+      const selection = region ? clampLocaleSelection(region.selection) : null;
+      if (region) {
+        region.selection = selection;
+      }
+      if (!selection) {
+        els.localeSelection.hidden = true;
+        els.localeSelectionMeta.textContent = state.locale.regions.length
+          ? "请选择一个选区 tab"
+          : "在左侧画布中拖拽框选文字区域";
+        return;
+      }
+
+      const canvasRect = els.localePreviewCanvas.getBoundingClientRect();
+      const frameRect = els.localePreviewFrame.getBoundingClientRect();
+      const scaleX = canvasRect.width / state.width;
+      const scaleY = canvasRect.height / state.height;
+      els.localeSelection.hidden = false;
+      els.localeSelection.style.left = `${canvasRect.left - frameRect.left + selection.x * scaleX}px`;
+      els.localeSelection.style.top = `${canvasRect.top - frameRect.top + selection.y * scaleY}px`;
+      els.localeSelection.style.width = `${selection.width * scaleX}px`;
+      els.localeSelection.style.height = `${selection.height * scaleY}px`;
+      els.localeSelectionMeta.textContent = `${Math.round(selection.x)}, ${Math.round(selection.y)} · ${Math.round(selection.width)} x ${Math.round(selection.height)} px`;
+    }
+
+    async function openLocaleEditor() {
+      els.localeToolButton.disabled = true;
+      try {
+        state.locale.baseCanvas = await renderCanvasExport();
+        state.locale.open = true;
+        state.locale.regions = [];
+        state.locale.activeRegionId = null;
+        state.locale.nextRegionId = 1;
+        state.locale.drag = null;
+        els.localeEditor.hidden = false;
+        els.localeToolButton.classList.add("is-active");
+        syncLocaleControlsFromRegion(null);
+        renderLocaleTabs();
+        renderLocalePreview();
+      } catch (error) {
+        console.error(error);
+        setTemporaryButtonLabel(els.localeToolButton, "打开失败");
+      } finally {
+        els.localeToolButton.disabled = false;
+      }
+    }
+
+    function closeLocaleEditor() {
+      state.locale.open = false;
+      state.locale.baseCanvas = null;
+      state.locale.regions = [];
+      state.locale.activeRegionId = null;
+      state.locale.drag = null;
+      els.localeEditor.hidden = true;
+      els.localeToolButton.classList.remove("is-active");
+      els.localeSelection.hidden = true;
+      renderLocaleTabs();
+    }
+
+    function deleteActiveLocaleRegion() {
+      const activeRegionId = state.locale.activeRegionId;
+      const activeIndex = state.locale.regions.findIndex((region) => region.id === activeRegionId);
+      if (activeIndex < 0) {
+        return false;
+      }
+
+      state.locale.regions.splice(activeIndex, 1);
+      state.locale.activeRegionId = state.locale.regions[activeIndex]?.id || state.locale.regions[activeIndex - 1]?.id || null;
+      state.locale.drag = null;
+      syncLocaleControlsFromRegion(getActiveLocaleRegion());
+      renderLocaleTabs();
+      renderLocalePreview();
+      return true;
+    }
+
+    function resetLocaleSelection() {
+      deleteActiveLocaleRegion();
+    }
+
+    function startLocaleSelection(event) {
+      if (!state.locale.open || event.button !== 0) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getLocalePreviewPoint(event);
+      const region = getActiveLocaleRegion();
+      const selection = region?.selection || null;
+      const handle = event.target.closest?.(".locale-selection-handle");
+      const isMoving = event.target === els.localeSelection && selection;
+      const isResizing = Boolean(handle && selection);
+      els.localePreviewFrame.setPointerCapture(event.pointerId);
+      state.locale.drag = {
+        type: isResizing ? "resize" : isMoving ? "move" : "create",
+        corner: handle?.dataset.corner || null,
+        pointerId: event.pointerId,
+        startPoint: point,
+        startSelection: selection ? { ...selection } : null,
+        regionId: region?.id || null
+      };
+
+      if (!isMoving && !isResizing) {
+        const nextRegion = createLocaleRegion({ x: point.x, y: point.y, width: 1, height: 1 });
+        state.locale.drag.regionId = nextRegion.id;
+        renderLocalePreview();
+      }
+    }
+
+    function continueLocaleSelection(event) {
+      const drag = state.locale.drag;
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = getLocalePreviewPoint(event);
+      const region = state.locale.regions.find((item) => item.id === drag.regionId) || getActiveLocaleRegion();
+      if (!region) {
+        return;
+      }
+
+      if (drag.type === "move" && drag.startSelection) {
+        region.selection = clampLocaleSelection({
+          ...drag.startSelection,
+          x: drag.startSelection.x + point.x - drag.startPoint.x,
+          y: drag.startSelection.y + point.y - drag.startPoint.y
+        });
+      } else if (drag.type === "resize" && drag.startSelection) {
+        const left = drag.corner.includes("w")
+          ? Math.min(point.x, drag.startSelection.x + drag.startSelection.width - 1)
+          : drag.startSelection.x;
+        const right = drag.corner.includes("e")
+          ? Math.max(point.x, drag.startSelection.x + 1)
+          : drag.startSelection.x + drag.startSelection.width;
+        const top = drag.corner.includes("n")
+          ? Math.min(point.y, drag.startSelection.y + drag.startSelection.height - 1)
+          : drag.startSelection.y;
+        const bottom = drag.corner.includes("s")
+          ? Math.max(point.y, drag.startSelection.y + 1)
+          : drag.startSelection.y + drag.startSelection.height;
+
+        region.selection = clampLocaleSelection({
+          x: left,
+          y: top,
+          width: right - left,
+          height: bottom - top
+        });
+      } else {
+        region.selection = clampLocaleSelection({
+          x: Math.min(drag.startPoint.x, point.x),
+          y: Math.min(drag.startPoint.y, point.y),
+          width: Math.max(1, Math.abs(point.x - drag.startPoint.x)),
+          height: Math.max(1, Math.abs(point.y - drag.startPoint.y))
+        });
+      }
+      renderLocalePreview();
+    }
+
+    function endLocaleSelection(event) {
+      const drag = state.locale.drag;
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      if (els.localePreviewFrame.hasPointerCapture(event.pointerId)) {
+        els.localePreviewFrame.releasePointerCapture(event.pointerId);
+      }
+      state.locale.drag = null;
+      renderLocalePreview();
+    }
+
+    function parseLocaleEntries(value = els.localeTextInput.value) {
+      return value
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const separatorIndex = line.indexOf("|");
+          if (separatorIndex < 0) {
+            return null;
+          }
+          const language = line.slice(0, separatorIndex).trim();
+          const text = line.slice(separatorIndex + 1).trim();
+          return language && text ? { language, text } : null;
+        })
+        .filter(Boolean);
+    }
+
+    function sanitizeFilename(name) {
+      return name.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, "_").slice(0, 80) || "language";
+    }
+
+    function cloneCanvas(sourceCanvas) {
+      const canvas = document.createElement("canvas");
+      canvas.width = sourceCanvas.width;
+      canvas.height = sourceCanvas.height;
+      canvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
+      return canvas;
+    }
+
+    function sampleEraseFill(context, rect, canvas) {
+      const x1 = clamp(Math.floor(rect.x), 0, canvas.width - 1);
+      const y1 = clamp(Math.floor(rect.y), 0, canvas.height - 1);
+      const x2 = clamp(Math.ceil(rect.x + rect.width), 0, canvas.width - 1);
+      const y2 = clamp(Math.ceil(rect.y + rect.height), 0, canvas.height - 1);
+      const samples = [];
+      const xStep = Math.max(1, Math.floor((x2 - x1) / 28));
+      const yStep = Math.max(1, Math.floor((y2 - y1) / 28));
+
+      for (let x = x1; x <= x2; x += xStep) {
+        samples.push([x, Math.max(0, y1 - 2)], [x, Math.min(canvas.height - 1, y2 + 2)]);
+      }
+      for (let y = y1; y <= y2; y += yStep) {
+        samples.push([Math.max(0, x1 - 2), y], [Math.min(canvas.width - 1, x2 + 2), y]);
+      }
+
+      if (!samples.length) {
+        return getCanvasBackgroundPaint();
+      }
+
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let alpha = 0;
+      samples.forEach(([x, y]) => {
+        const pixel = context.getImageData(x, y, 1, 1).data;
+        red += pixel[0];
+        green += pixel[1];
+        blue += pixel[2];
+        alpha += pixel[3];
+      });
+
+      const count = samples.length;
+      return `rgba(${Math.round(red / count)}, ${Math.round(green / count)}, ${Math.round(blue / count)}, ${(alpha / count / 255).toFixed(3)})`;
+    }
+
+    function wrapTextLines(context, text, maxWidth) {
+      return text.split(/\n/).flatMap((paragraph) => {
+        const units = Array.from(paragraph || " ");
+        const lines = [];
+        let current = "";
+        units.forEach((unit) => {
+          const candidate = current + unit;
+          if (current && context.measureText(candidate).width > maxWidth) {
+            lines.push(current);
+            current = unit.trimStart();
+          } else {
+            current = candidate;
+          }
+        });
+        if (current) {
+          lines.push(current);
+        }
+        return lines.length ? lines : [""];
+      });
+    }
+
+    function getLocaleRenderOptions(scale, region = getActiveLocaleRegion()) {
+      const source = region || {
+        color: els.localeTextColor.value || "#0f0f10",
+        fontSize: Number(els.localeFontSize.value) || 24,
+        fontWeight: Number(els.localeFontWeight.value) || 800,
+        align: els.localeTextAlign.value || "center"
+      };
+      return {
+        scale,
+        color: source.color || "#0f0f10",
+        fontSize: clamp(Number(source.fontSize) || 24, 8, 160),
+        fontWeight: clamp(Number(source.fontWeight) || 800, 100, 1000),
+        align: source.align || "center"
+      };
+    }
+
+    function drawLocaleText(context, entry, rect, options) {
+      const padding = Math.max(8 * options.scale, rect.width * 0.04);
+      const fontSize = options.fontSize * options.scale;
+      const lineHeight = fontSize * 1.25;
+      const maxTextWidth = Math.max(1, rect.width - padding * 2);
+
+      context.save();
+      context.beginPath();
+      context.rect(rect.x, rect.y, rect.width, rect.height);
+      context.clip();
+      context.fillStyle = options.color;
+      context.font = `${options.fontWeight || 800} ${fontSize}px Arial, "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif`;
+      context.textBaseline = "middle";
+      context.textAlign = options.align;
+
+      const lines = wrapTextLines(context, entry.text, maxTextWidth);
+      const totalHeight = lines.length * lineHeight;
+      const firstY = rect.y + rect.height / 2 - totalHeight / 2 + lineHeight / 2;
+      const x = options.align === "left"
+        ? rect.x + padding
+        : options.align === "right"
+          ? rect.x + rect.width - padding
+          : rect.x + rect.width / 2;
+
+      lines.forEach((line, index) => {
+        context.fillText(line, x, firstY + index * lineHeight);
+      });
+      context.restore();
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    async function saveLocaleImages() {
+      updateActiveLocaleRegionFromControls();
+      const regions = state.locale.regions
+        .map((region) => ({
+          ...region,
+          selection: clampLocaleSelection(region.selection),
+          entries: parseLocaleEntries(region.text)
+        }))
+        .filter((region) => region.selection);
+
+      if (!regions.length) {
+        setTemporaryButtonLabel(els.localeSaveButton, "请先框选区域");
+        return;
+      }
+
+      const languageMap = new Map();
+      regions.forEach((region) => {
+        region.entries.forEach((entry) => {
+          if (!languageMap.has(entry.language)) {
+            languageMap.set(entry.language, entry.language);
+          }
+        });
+      });
+
+      if (!languageMap.size) {
+        setTemporaryButtonLabel(els.localeSaveButton, "请填写语言文案");
+        return;
+      }
+
+      els.localeSaveButton.disabled = true;
+      try {
+        const baseCanvas = state.locale.baseCanvas || await renderCanvasExport();
+        const scale = baseCanvas.width / state.width;
+
+        for (const language of languageMap.keys()) {
+          const canvas = cloneCanvas(baseCanvas);
+          const context = canvas.getContext("2d");
+          regions.forEach((region) => {
+            const entry = region.entries.find((item) => item.language === language);
+            if (!entry) {
+              return;
+            }
+
+            const rect = {
+              x: region.selection.x * scale,
+              y: region.selection.y * scale,
+              width: region.selection.width * scale,
+              height: region.selection.height * scale
+            };
+            const options = getLocaleRenderOptions(scale, region);
+            context.fillStyle = sampleEraseFill(context, rect, canvas);
+            context.fillRect(rect.x, rect.y, rect.width, rect.height);
+            drawLocaleText(context, entry, rect, options);
+          });
+          const blob = await canvasToBlob(canvas);
+          if (blob) {
+            downloadBlob(blob, `${sanitizeFilename(language)}.png`);
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 90));
+        }
+        setTemporaryButtonLabel(els.localeSaveButton, "已保存");
+      } catch (error) {
+        console.error(error);
+        setTemporaryButtonLabel(els.localeSaveButton, "保存失败");
+      } finally {
+        els.localeSaveButton.disabled = false;
+      }
     }
 
     function setTemporaryButtonLabel(button, label) {
@@ -3423,6 +4857,10 @@
         handleConnectorSurfacePointerDown(event);
         return;
       }
+      if (state.tool === "marker") {
+        handleMarkerSurfacePointerDown(event);
+        return;
+      }
 
       const undoSnapshot = createUndoSnapshot();
       event.preventDefault();
@@ -3461,7 +4899,7 @@
     }
 
     function startImageResize(event) {
-      if (state.tool === "connect") {
+      if (state.tool === "connect" || state.tool === "marker") {
         return;
       }
 
@@ -3499,7 +4937,7 @@
     }
 
     function startGroupResize(event) {
-      if (state.tool === "connect") {
+      if (state.tool === "connect" || state.tool === "marker") {
         return;
       }
 
@@ -3791,6 +5229,20 @@
         return;
       }
 
+      if (state.locale.open) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeLocaleEditor();
+          return;
+        }
+
+        if ((event.key === "Delete" || event.key === "Backspace") && !isEditable) {
+          event.preventDefault();
+          deleteActiveLocaleRegion();
+        }
+        return;
+      }
+
       if (event.key === "Shift" || event.key === "Meta" || event.key === "Control") {
         state.modifierSelect = true;
       }
@@ -3798,6 +5250,13 @@
       if (event.key === "Enter" && state.editingConnectorId && !isEditable) {
         event.preventDefault();
         endConnectorEdit();
+        return;
+      }
+
+      if (event.key === "Enter" && state.tool === "marker" && !isEditable) {
+        event.preventDefault();
+        clearMarkerSelection();
+        setTool("select");
         return;
       }
 
@@ -3813,6 +5272,11 @@
 
       if (state.selectedConnectorId) {
         deleteConnector(state.selectedConnectorId);
+        event.preventDefault();
+        return;
+      }
+
+      if (deleteSelectedMarker()) {
         event.preventDefault();
         return;
       }
@@ -3905,12 +5369,17 @@
         handleConnectorSurfacePointerDown(event);
         return;
       }
-      if (event.target.closest(".canvas-image, .image-resize-handle, .group-resize-handle")) {
+      if (state.tool === "marker") {
+        handleMarkerSurfacePointerDown(event);
+        return;
+      }
+      if (event.target.closest(".canvas-image, .image-resize-handle, .group-resize-handle, .canvas-marker")) {
         return;
       }
 
       clearSelection();
       clearConnectorSelection();
+      clearMarkerSelection();
       clearGuides();
     }
 
@@ -3929,10 +5398,42 @@
     els.copyCanvasButton.addEventListener("click", copyCanvasPng);
     els.selectToolButton.addEventListener("click", () => setTool("select"));
     els.connectToolButton.addEventListener("click", () => setTool("connect"));
+    els.markerToolButton.addEventListener("click", () => setTool("marker"));
+    els.localeToolButton.addEventListener("click", openLocaleEditor);
     els.backgroundLightButton.addEventListener("click", () => setCanvasBackground("light"));
     els.backgroundDarkButton.addEventListener("click", () => setCanvasBackground("dark"));
+    els.canvasRadiusRange.addEventListener("pointerdown", beginCanvasRadiusChange);
+    els.canvasRadiusRange.addEventListener("focus", beginCanvasRadiusChange);
+    els.canvasRadiusRange.addEventListener("input", () => {
+      beginCanvasRadiusChange();
+      updateCanvasRadius(els.canvasRadiusRange.value);
+    });
+    els.canvasRadiusRange.addEventListener("change", commitCanvasRadiusChange);
+    els.canvasRadiusRange.addEventListener("blur", commitCanvasRadiusChange);
+    els.canvasOpacityRange.addEventListener("pointerdown", beginCanvasOpacityChange);
+    els.canvasOpacityRange.addEventListener("focus", beginCanvasOpacityChange);
+    els.canvasOpacityRange.addEventListener("input", () => {
+      beginCanvasOpacityChange();
+      updateCanvasOpacity(els.canvasOpacityRange.value);
+    });
+    els.canvasOpacityRange.addEventListener("change", commitCanvasOpacityChange);
+    els.canvasOpacityRange.addEventListener("blur", commitCanvasOpacityChange);
     els.canvas.addEventListener("pointerdown", handleCanvasPointerDown);
     els.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    els.localeClose.addEventListener("click", closeLocaleEditor);
+    els.localePreviewFrame.addEventListener("pointerdown", startLocaleSelection);
+    els.localeResetSelection.addEventListener("click", resetLocaleSelection);
+    els.localeSaveButton.addEventListener("click", saveLocaleImages);
+    [els.localeTextInput, els.localeTextColor, els.localeFontSize, els.localeFontWeight, els.localeTextAlign].forEach((control) => {
+      control.addEventListener("input", () => {
+        updateActiveLocaleRegionFromControls();
+        renderLocalePreview();
+      });
+      control.addEventListener("change", () => {
+        updateActiveLocaleRegionFromControls();
+        renderLocalePreview();
+      });
+    });
     els.editorClose.addEventListener("click", closeImageEditor);
     els.cropModeButton.addEventListener("click", () => setEditorMode("crop"));
     els.spotlightModeButton.addEventListener("click", () => setEditorMode("spotlight"));
@@ -3993,6 +5494,12 @@
     window.addEventListener("pointermove", continueConnectorInteraction);
     window.addEventListener("pointerup", endConnectorInteraction);
     window.addEventListener("pointercancel", endConnectorInteraction);
+    window.addEventListener("pointermove", continueMarkerInteraction);
+    window.addEventListener("pointerup", endMarkerInteraction);
+    window.addEventListener("pointercancel", endMarkerInteraction);
+    window.addEventListener("pointermove", continueLocaleSelection);
+    window.addEventListener("pointerup", endLocaleSelection);
+    window.addEventListener("pointercancel", endLocaleSelection);
     window.addEventListener("pointermove", continueEditorInteraction);
     window.addEventListener("pointerup", endEditorInteraction);
     window.addEventListener("pointercancel", endEditorInteraction);
@@ -4004,6 +5511,7 @@
     window.addEventListener("resize", () => {
       renderCanvas();
       renderEditorSelection();
+      renderLocaleSelection();
     });
     window.addEventListener("beforeunload", () => {
       getReferencedImageUrls().forEach((url) => {
@@ -4019,14 +5527,27 @@
         y: Math.round(state.y),
         width: Math.round(state.width),
         height: Math.round(state.height),
+        canvasRadius: Math.round(state.canvasRadius),
         imageCount: state.images.length,
         tool: state.tool,
         canvasBackground: state.canvasBackground,
         canvasBackgroundColor: getCanvasBackgroundColor(),
+        canvasBackgroundPaint: getCanvasBackgroundPaint(),
+        canvasBackgroundOpacity: Math.round(state.canvasBackgroundOpacity * 100),
         connectorCount: state.connectors.length,
         connectorNodeCount: state.connectorNodes.length,
         editingConnectorId: state.editingConnectorId,
         selectedConnectorNodeId: state.selectedConnectorNodeId,
+        markerCount: state.markers.length,
+        nextMarkerNumber: state.nextMarkerNumber,
+        selectedMarkerId: state.selectedMarkerId,
+        markers: state.markers.map((marker) => ({
+          id: marker.id,
+          number: marker.number,
+          x: Math.round(marker.x),
+          y: Math.round(marker.y),
+          selected: marker.id === state.selectedMarkerId
+        })),
         connectorNodes: state.connectorNodes.map((node) => ({
           id: node.id,
           x: Math.round(node.x),
@@ -4081,6 +5602,21 @@
         isMovingCanvas: state.canvasDrag?.type === "move",
         isResizing: state.canvasDrag?.type === "resize",
         isEditingImage: Boolean(state.imageDrag),
+        localeOpen: Boolean(state.locale.open),
+        localeActiveRegionId: state.locale.activeRegionId,
+        localeRegions: state.locale.regions.map((region) => ({
+          id: region.id,
+          text: region.text,
+          fontSize: region.fontSize,
+          fontWeight: region.fontWeight,
+          align: region.align,
+          selection: region.selection ? {
+            x: Math.round(region.selection.x),
+            y: Math.round(region.selection.y),
+            width: Math.round(region.selection.width),
+            height: Math.round(region.selection.height)
+          } : null
+        })),
         editorOpen: Boolean(state.editor),
         editorMode: state.editor?.mode || null,
         editorSelectionVisible: state.editor ? isEditorSelectionVisible() : null,
